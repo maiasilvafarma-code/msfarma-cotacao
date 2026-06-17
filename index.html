@@ -5,309 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cotação de Fornecedores · MS Farma</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  :root {
-    --verde:    #1A6B4A;
-    --verde2:   #22885F;
-    --verde-bg: #EAF4EF;
-    --amarelo:  #F5C842;
-    --cinza1:   #F7F8F7;
-    --cinza2:   #E8ECEB;
-    --cinza3:   #B0BAB7;
-    --cinza4:   #6B7876;
-    --preto:    #1A1E1D;
-    --branco:   #FFFFFF;
-    --erro:     #D94F3D;
-    --sombra:   0 2px 12px rgba(26,107,74,.10);
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--cinza1);
-    color: var(--preto);
-    min-height: 100vh;
-    font-size: 15px;
-  }
-
-  /* ── HEADER ── */
-  header {
-    background: var(--verde);
-    color: var(--branco);
-    padding: 0 24px;
-    height: 58px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 8px rgba(0,0,0,.18);
-  }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-icon {
-    width: 32px; height: 32px;
-    background: var(--amarelo);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px;
-  }
-  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: .3px; }
-  .logo-sub { font-size: 11px; font-weight: 300; opacity: .75; }
-  .header-actions { display: flex; gap: 8px; }
-
-  /* ── TABS ── */
-  .tabs {
-    background: var(--branco);
-    border-bottom: 1px solid var(--cinza2);
-    display: flex;
-    padding: 0 24px;
-    gap: 0;
-  }
-  .tab {
-    padding: 14px 20px 12px;
-    font-size: 13px; font-weight: 500;
-    color: var(--cinza4);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all .18s;
-    white-space: nowrap;
-  }
-  .tab:hover { color: var(--verde); }
-  .tab.active { color: var(--verde); border-bottom-color: var(--verde); }
-
-  /* ── MAIN ── */
-  main { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
-
-  /* ── CARDS ── */
-  .card {
-    background: var(--branco);
-    border-radius: 12px;
-    box-shadow: var(--sombra);
-    padding: 24px;
-    margin-bottom: 20px;
-  }
-  .card-title {
-    font-size: 13px; font-weight: 600;
-    color: var(--verde);
-    text-transform: uppercase;
-    letter-spacing: .7px;
-    margin-bottom: 16px;
-    display: flex; align-items: center; gap: 6px;
-  }
-
-  /* ── FORM GRID ── */
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  label { font-size: 12px; font-weight: 500; color: var(--cinza4); }
-  input, select, textarea {
-    border: 1.5px solid var(--cinza2);
-    border-radius: 7px;
-    padding: 9px 12px;
-    font-family: inherit;
-    font-size: 14px;
-    color: var(--preto);
-    background: var(--branco);
-    transition: border-color .15s;
-    width: 100%;
-  }
-  input:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: var(--verde);
-  }
-
-  /* ── BOTÕES ── */
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 18px;
-    border-radius: 8px;
-    font-family: inherit; font-size: 13px; font-weight: 500;
-    cursor: pointer; border: none; transition: all .18s;
-  }
-  .btn-primary { background: var(--verde); color: var(--branco); }
-  .btn-primary:hover { background: var(--verde2); }
-  .btn-outline {
-    background: transparent;
-    border: 1.5px solid var(--cinza2);
-    color: var(--cinza4);
-  }
-  .btn-outline:hover { border-color: var(--verde); color: var(--verde); }
-  .btn-yellow { background: var(--amarelo); color: var(--preto); }
-  .btn-yellow:hover { background: #e8ba2a; }
-  .btn-danger { background: var(--erro); color: var(--branco); font-size: 12px; padding: 6px 12px; }
-  .btn-danger:hover { background: #c0392b; }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
-  .btn-icon { padding: 7px; border-radius: 7px; font-size: 15px; }
-
-  /* ── FORNECEDORES ── */
-  .fornecedor-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
-    margin-top: 16px;
-  }
-  .fornecedor-card {
-    border: 1.5px solid var(--cinza2);
-    border-radius: 10px;
-    padding: 14px 16px;
-    display: flex; flex-direction: column; gap: 6px;
-    position: relative;
-    transition: border-color .18s;
-  }
-  .fornecedor-card.selected { border-color: var(--verde); background: var(--verde-bg); }
-  .fornecedor-card .fnome { font-weight: 600; font-size: 14px; }
-  .fornecedor-card .fdado { font-size: 12px; color: var(--cinza4); }
-  .fornecedor-card .factions { display: flex; gap: 6px; margin-top: 6px; }
-  .chip {
-    display: inline-block;
-    background: var(--verde-bg);
-    color: var(--verde);
-    border-radius: 20px;
-    padding: 2px 10px;
-    font-size: 11px; font-weight: 500;
-  }
-
-  /* ── TABELA COTAÇÃO ── */
-  .table-wrap { overflow-x: auto; margin-top: 4px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead th {
-    background: var(--cinza1);
-    color: var(--cinza4);
-    font-weight: 600;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    padding: 10px 12px;
-    text-align: left;
-    white-space: nowrap;
-    position: sticky; top: 0;
-  }
-  thead th.forn-col {
-    background: var(--verde-bg);
-    color: var(--verde);
-    text-align: center;
-  }
-  tbody tr { border-bottom: 1px solid var(--cinza2); }
-  tbody tr:hover { background: var(--cinza1); }
-  td { padding: 10px 12px; vertical-align: middle; }
-  td.produto-nome { font-weight: 500; }
-  td.preco-cell { text-align: center; }
-  td.preco-cell input {
-    width: 90px; text-align: right;
-    font-family: 'DM Mono', monospace;
-    font-size: 13px; padding: 6px 8px;
-  }
-  .melhor-preco { background: #DCFCE7 !important; }
-  .melhor-preco input { color: var(--verde); font-weight: 600; }
-  .winner-badge {
-    display: inline-block;
-    background: var(--verde);
-    color: var(--branco);
-    border-radius: 4px;
-    padding: 2px 7px;
-    font-size: 11px;
-    font-family: 'DM Mono', monospace;
-  }
-  td.prazo-cell input { width: 70px; text-align: center; }
-  td.desconto-cell input { width: 70px; text-align: right; }
-
-  /* ── PLACAR ── */
-  .placar-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
-    margin-top: 8px;
-  }
-  .placar-card {
-    border: 1.5px solid var(--cinza2);
-    border-radius: 10px;
-    padding: 16px;
-    text-align: center;
-  }
-  .placar-card.campeao {
-    border-color: var(--amarelo);
-    background: #FFFBEA;
-  }
-  .placar-nome { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-  .placar-num {
-    font-size: 32px; font-weight: 600;
-    color: var(--verde);
-    font-family: 'DM Mono', monospace;
-  }
-  .placar-label { font-size: 11px; color: var(--cinza4); margin-top: 2px; }
-  .corona { font-size: 22px; }
-
-  /* ── PDF UPLOAD ── */
-  .pdf-zone {
-    border: 2px dashed var(--cinza2);
-    border-radius: 10px;
-    padding: 28px;
-    text-align: center;
-    color: var(--cinza4);
-    font-size: 14px;
-    cursor: pointer;
-    transition: all .18s;
-  }
-  .pdf-zone:hover { border-color: var(--verde); color: var(--verde); background: var(--verde-bg); }
-  .pdf-icon { font-size: 32px; margin-bottom: 8px; }
-  .pdf-hint { font-size: 12px; margin-top: 6px; opacity: .7; }
-
-  /* ── EMPTY STATE ── */
-  .empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--cinza3);
-  }
-  .empty-icon { font-size: 36px; margin-bottom: 10px; }
-  .empty-text { font-size: 14px; }
-
-  /* ── TOAST ── */
-  #toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--preto); color: var(--branco);
-    padding: 10px 22px; border-radius: 8px;
-    font-size: 13px; font-weight: 500;
-    box-shadow: 0 4px 16px rgba(0,0,0,.25);
-    opacity: 0; pointer-events: none;
-    transition: opacity .3s;
-    z-index: 999;
-  }
-  #toast.show { opacity: 1; }
-
-  /* ── AI BADGE ── */
-  .ai-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: linear-gradient(135deg, #1A6B4A, #22885F);
-    color: var(--branco);
-    border-radius: 20px;
-    padding: 3px 10px;
-    font-size: 11px; font-weight: 500;
-  }
-  .ai-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--amarelo);
-    animation: pulse 1.5s infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-  /* ── SECTION TITLE ── */
-  .section-row {
-    display: flex; align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px; gap: 10px;
-    flex-wrap: wrap;
-  }
-  .section-title { font-size: 17px; font-weight: 600; }
-
-  /* ── PANELS ── */
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 600px) {
-    main { padding: 16px 12px 50px; }
-    .tabs { padding: 0 12px; }
-    .tab { padding: 12px 12px 10px; font-size: 12px; }
-    header { padding: 0 14px; }
-    .card { padding: 16px; }
-  }
+:root{--verde:#1A6B4A;--verde2:#22885F;--verde-bg:#EAF4EF;--amarelo:#F5C842;--cinza1:#F7F8F7;--cinza2:#E8ECEB;--cinza3:#B0BAB7;--cinza4:#6B7876;--preto:#1A1E1D;--branco:#FFFFFF;--erro:#D94F3D;--alerta:#F59E0B;--sombra:0 2px 12px rgba(26,107,74,.10);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cinza1);color:var(--preto);min-height:100vh;font-size:15px;}
+header{background:var(--verde);color:var(--branco);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:30px;height:30px;background:var(--amarelo);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-size:14px;font-weight:600;}
+.logo-sub{font-size:10px;font-weight:300;opacity:.75;}
+.header-actions{display:flex;gap:6px;}
+.tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:13px 12px 11px;font-size:12px;font-weight:500;color:var(--cinza4);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
+.tab:hover{color:var(--verde);}
+.tab.active{color:var(--verde);border-bottom-color:var(--verde);}
+main{max-width:1100px;margin:0 auto;padding:20px 14px 60px;}
+.card{background:var(--branco);border-radius:12px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px;}
+.card-title{font-size:12px;font-weight:600;color:var(--verde);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+label{font-size:11px;font-weight:500;color:var(--cinza4);}
+input,select,textarea{border:1.5px solid var(--cinza2);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;color:var(--preto);background:var(--branco);transition:border-color .15s;width:100%;}
+input:focus,select:focus{outline:none;border-color:var(--verde);}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .18s;}
+.btn-primary{background:var(--verde);color:var(--branco);}
+.btn-primary:hover{background:var(--verde2);}
+.btn-outline{background:transparent;border:1.5px solid var(--cinza2);color:var(--cinza4);}
+.btn-outline:hover{border-color:var(--verde);color:var(--verde);}
+.btn-yellow{background:var(--amarelo);color:var(--preto);}
+.btn-yellow:hover{background:#e8ba2a;}
+.btn-green{background:#25D366;color:var(--branco);}
+.btn-green:hover{background:#1ebe5a;}
+.btn-danger{background:var(--erro);color:var(--branco);}
+.btn-danger:hover{background:#c0392b;}
+.btn-sm{padding:6px 11px;font-size:12px;}
+.btn-xs{padding:4px 8px;font-size:11px;}
+.forn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px;}
+.forn-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:5px;}
+.forn-card .fn{font-weight:600;font-size:13px;}
+.forn-card .fd{font-size:11px;color:var(--cinza4);}
+.forn-card .fa{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+.chip{display:inline-block;background:var(--verde-bg);color:var(--verde);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--cinza1);color:var(--cinza4);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 9px;text-align:left;white-space:nowrap;}
+thead th.fh{background:var(--verde-bg);color:var(--verde);text-align:center;}
+tbody tr{border-bottom:1px solid var(--cinza2);}
+tbody tr:hover{background:var(--cinza1);}
+td{padding:8px 9px;vertical-align:middle;}
+td.pn{font-weight:500;max-width:160px;}
+td.pc{text-align:center;}
+td.pc input{width:82px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;padding:4px 6px;}
+.mp{background:#DCFCE7!important;}
+.mp input{color:var(--verde);font-weight:600;}
+.wb{display:inline-block;background:var(--verde);color:var(--branco);border-radius:4px;padding:2px 6px;font-size:10px;font-family:'DM Mono',monospace;}
+td.pz input{width:56px;text-align:center;}
+td.dc input{width:56px;text-align:right;}
+td.vd input{width:105px;font-size:12px;}
+.placar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:8px;}
+.placar-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:14px;text-align:center;}
+.placar-card.cx{border-color:var(--amarelo);background:#FFFBEA;}
+.pn2{font-size:13px;font-weight:600;margin-bottom:4px;}
+.pnum{font-size:28px;font-weight:600;color:var(--verde);font-family:'DM Mono',monospace;}
+.plbl{font-size:11px;color:var(--cinza4);margin-top:2px;}
+.pdf-zone{border:2px dashed var(--cinza2);border-radius:10px;padding:22px;text-align:center;color:var(--cinza4);font-size:13px;cursor:pointer;transition:all .18s;}
+.pdf-zone:hover{border-color:var(--verde);color:var(--verde);background:var(--verde-bg);}
+.pi{font-size:28px;margin-bottom:6px;}
+.ph{font-size:11px;margin-top:5px;opacity:.7;}
+.empty{text-align:center;padding:32px 16px;color:var(--cinza3);}
+.ei{font-size:32px;margin-bottom:10px;}
+.et{font-size:13px;}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--preto);color:var(--branco);padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;white-space:nowrap;}
+#toast.show{opacity:1;}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#1A6B4A,#22885F);color:var(--branco);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--amarelo);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
+.st{font-size:16px;font-weight:600;}
+.panel{display:none;}
+.panel.active{display:block;}
+.av-box{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400E;margin-bottom:12px;}
+.combo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cinza2);flex-wrap:wrap;}
+.combo-row:last-child{border-bottom:none;}
+.cp1{font-weight:500;font-size:13px;flex:1;min-width:110px;}
+.cp2{font-size:12px;color:var(--verde);font-weight:600;}
+.cp3{font-family:'DM Mono',monospace;font-size:13px;}
+.cp4{font-size:11px;color:var(--cinza4);}
+.hi{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;margin-bottom:8px;}
+.hh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:5px;}
+.hd{font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace;}
+.hn{font-weight:600;font-size:13px;}
+.gw{position:relative;height:250px;}
+@media(max-width:600px){main{padding:12px 10px 50px;}header{padding:0 12px;}.card{padding:14px;}.logo-sub{display:none;}}
 </style>
 </head>
 <body>
@@ -321,167 +112,682 @@
     </div>
   </div>
   <div class="header-actions">
-    <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Exportar</button>
+    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲 WhatsApp</button>
+    <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Excel</button>
   </div>
 </header>
 
 <div class="tabs">
-  <div class="tab active" onclick="abrirTab('fornecedores', this)">👥 Fornecedores</div>
-  <div class="tab" onclick="abrirTab('produtos', this)">📦 Produtos</div>
-  <div class="tab" onclick="abrirTab('cotacao', this)">📊 Comparativo</div>
-  <div class="tab" onclick="abrirTab('placar', this)">🏆 Placar</div>
+  <div class="tab active" onclick="abrirTab('fornecedores',this)">👥 Fornecedores</div>
+  <div class="tab" onclick="abrirTab('produtos',this)">📦 Produtos</div>
+  <div class="tab" onclick="abrirTab('cotacao',this)">📊 Comparativo</div>
+  <div class="tab" onclick="abrirTab('placar',this)">🏆 Placar</div>
+  <div class="tab" onclick="abrirTab('combo',this)">💡 Combo Ideal</div>
+  <div class="tab" onclick="abrirTab('graficos',this)">📈 Histórico</div>
 </div>
 
 <main>
 
-  <!-- ════════════ FORNECEDORES ════════════ -->
-  <div id="panel-fornecedores" class="panel active">
-    <div class="card">
-      <div class="section-row">
-        <div class="section-title">Fornecedores</div>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalFornecedor()">+ Adicionar</button>
-      </div>
-      <div id="lista-fornecedores">
-        <div class="empty"><div class="empty-icon">🏪</div><div class="empty-text">Nenhum fornecedor cadastrado.<br>Clique em "Adicionar" para começar.</div></div>
+<div id="panel-fornecedores" class="panel active">
+  <div class="card">
+    <div class="sr"><div class="st">Fornecedores</div><button class="btn btn-primary btn-sm" onclick="abrirMF()">+ Adicionar</button></div>
+    <div id="lista-forn"></div>
+  </div>
+</div>
+
+<div id="panel-produtos" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Lista de Produtos</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="abrirMP()">+ Produto</button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('icsv').click()">⬆ Importar</button>
+        <input type="file" id="icsv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
       </div>
     </div>
+    <div id="lista-prod"></div>
   </div>
+</div>
 
-  <!-- ════════════ PRODUTOS ════════════ -->
-  <div id="panel-produtos" class="panel">
-    <div class="card">
-      <div class="section-row">
-        <div class="section-title">Lista de Produtos</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="abrirModalProduto()">+ Produto</button>
-          <button class="btn btn-primary btn-sm" onclick="document.getElementById('input-csv').click()">⬆ Importar lista</button>
-          <input type="file" id="input-csv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
-        </div>
-      </div>
-      <div id="lista-produtos"></div>
+<div id="panel-cotacao" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Comparativo de Preços</div><span class="ai-badge"><span class="ai-dot"></span> IA ativa</span></div>
+    <div id="av"></div>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Suba o PDF, PNG ou JPG do orçamento — a IA extrai os preços automaticamente.</p>
+    <div id="upload-forn" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+    <div class="table-wrap"><div id="tab-cot"></div></div>
+  </div>
+</div>
+
+<div id="panel-placar" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Placar Final</div><button class="btn btn-outline btn-sm" onclick="calcularPlacar()">↻ Atualizar</button></div>
+    <div id="placar"></div>
+  </div>
+</div>
+
+<div id="panel-combo" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">💡 Combinação Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">Qual fornecedor comprar cada produto para ter a maior economia total.</p>
+    <div id="combo"></div>
+  </div>
+</div>
+
+<div id="panel-graficos" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">📈 Histórico de Cotações</div>
+      <button class="btn btn-primary btn-sm" onclick="salvarHistorico()">💾 Salvar cotação atual</button>
     </div>
+    <div id="hist"></div>
   </div>
-
-  <!-- ════════════ COTAÇÃO ════════════ -->
-  <div id="panel-cotacao" class="panel">
-    <div class="card">
-      <div class="section-row">
-        <div class="section-title">Comparativo de Preços</div>
-        <span class="ai-badge"><span class="ai-dot"></span> IA ativa</span>
-      </div>
-      <p style="font-size:13px;color:var(--cinza4);margin-bottom:16px">
-        Faça upload do PDF de cada fornecedor — a IA extrai os preços automaticamente. Ou preencha manualmente.
-      </p>
-
-      <!-- Upload por fornecedor -->
-      <div id="upload-fornecedores" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px"></div>
-
-      <!-- Tabela comparativa -->
-      <div class="table-wrap">
-        <div id="tabela-cotacao"></div>
-      </div>
+  <div class="card" id="card-graf" style="display:none">
+    <div class="sr">
+      <div class="st">Evolução de Preços</div>
+      <select id="sel-prod" onchange="renderGrafico()" style="font-size:12px;padding:5px 9px;border-radius:7px;border:1.5px solid var(--cinza2)"></select>
     </div>
+    <div class="gw"><canvas id="cgraf"></canvas></div>
   </div>
-
-  <!-- ════════════ PLACAR ════════════ -->
-  <div id="panel-placar" class="panel">
-    <div class="card">
-      <div class="section-row">
-        <div class="section-title">Placar Final</div>
-        <button class="btn btn-outline btn-sm" onclick="calcularPlacar()">↻ Recalcular</button>
-      </div>
-      <div id="conteudo-placar">
-        <div class="empty"><div class="empty-icon">🏆</div><div class="empty-text">Preencha os preços no Comparativo para ver o placar.</div></div>
-      </div>
-    </div>
-  </div>
+</div>
 
 </main>
 
-<!-- ════ MODAL FORNECEDOR ════ -->
-<div id="modal-forn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(440px,94vw);margin:0">
+<!-- MODAL FORNECEDOR -->
+<div id="mforn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,94vw);margin:0">
     <div class="card-title">📋 Fornecedor</div>
-    <input type="hidden" id="forn-id">
+    <input type="hidden" id="fid">
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="form-group" style="grid-column:1/-1">
-        <label>Nome do Fornecedor *</label>
-        <input id="forn-nome" placeholder="ex: Distribuidora Alfa">
-      </div>
-      <div class="form-group">
-        <label>Contato / WhatsApp</label>
-        <input id="forn-contato" placeholder="(00) 00000-0000">
-      </div>
-      <div class="form-group">
-        <label>Prazo padrão (dias)</label>
-        <input id="forn-prazo" type="number" placeholder="30" min="0">
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label>Observação</label>
-        <input id="forn-obs" placeholder="ex: Entrega toda segunda">
-      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="fnome" placeholder="ex: Distribuidora Alfa"></div>
+      <div class="form-group"><label>WhatsApp</label><input id="ftel" placeholder="(85) 99999-9999"></div>
+      <div class="form-group"><label>Prazo padrão (dias)</label><input id="fprazo" type="number" placeholder="30"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
-      <button class="btn btn-outline" onclick="fecharModal('modal-forn')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarFornecedor()">Salvar</button>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="fecharM('mforn')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarF()">Salvar</button>
     </div>
   </div>
 </div>
 
-<!-- ════ MODAL PRODUTO ════ -->
-<div id="modal-prod" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(440px,94vw);margin:0">
+<!-- MODAL PRODUTO -->
+<div id="mprod" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,94vw);margin:0">
     <div class="card-title">📦 Produto</div>
-    <input type="hidden" id="prod-id">
+    <input type="hidden" id="pid">
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="form-group" style="grid-column:1/-1">
-        <label>Nome do Produto *</label>
-        <input id="prod-nome" placeholder="ex: Dipirona 500mg 20cp">
+      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="pnome" placeholder="ex: Dipirona 500mg 20cp"></div>
+      <div class="form-group"><label>Código / EAN</label><input id="pcodigo" placeholder="opcional"></div>
+      <div class="form-group"><label>Unidade</label>
+        <select id="punid"><option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option></select>
       </div>
-      <div class="form-group">
-        <label>Código / EAN</label>
-        <input id="prod-codigo" placeholder="opcional">
-      </div>
-      <div class="form-group">
-        <label>Unidade</label>
-        <select id="prod-unidade">
-          <option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Qtd. solicitada</label>
-        <input id="prod-qtd" type="number" placeholder="1" min="1">
-      </div>
+      <div class="form-group"><label>Qtd. solicitada</label><input id="pqtd" type="number" placeholder="1" min="1"></div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
-      <button class="btn btn-outline" onclick="fecharModal('modal-prod')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarProduto()">Salvar</button>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="fecharM('mprod')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarP()">Salvar</button>
     </div>
   </div>
 </div>
 
-<!-- ════ MODAL PDF IA ════ -->
-<div id="modal-pdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(520px,96vw);margin:0">
-    <div class="card-title">🤖 Leitura de PDF por IA <span id="pdf-forn-nome"></span></div>
-    <input type="hidden" id="pdf-forn-id">
-    <div class="pdf-zone" onclick="document.getElementById('input-pdf').click()" id="pdf-drop">
-      <div class="pdf-icon">📄</div>
-      <div>Clique para selecionar o PDF do orçamento</div>
-      <div class="pdf-hint">ou arraste o arquivo aqui</div>
+<!-- MODAL PDF/IMG -->
+<div id="mpdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(510px,96vw);margin:0;max-height:92vh;overflow-y:auto">
+    <div class="card-title">🤖 Leitura por IA · <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+    <div class="pdf-zone" onclick="document.getElementById('ipdf').click()" id="pdfzone">
+      <div class="pi">📄</div>
+      <div>Clique para selecionar o orçamento</div>
+      <div class="ph">PDF, PNG ou JPG — a IA lê automaticamente 🤖</div>
     </div>
-    <input type="file" id="input-pdf" accept=".pdf" style="display:none" onchange="processarPDF(event)">
-    <div id="pdf-status" style="margin-top:14px;font-size:13px;color:var(--cinza4)"></div>
-    <div id="pdf-preview" style="margin-top:10px;display:none">
+    <input type="file" id="ipdf" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="processarArquivo(event)">
+    <div id="pdfstatus" style="margin-top:10px;font-size:13px;color:var(--cinza4)"></div>
+    <div id="pdfpreview" style="display:none;margin-top:10px">
       <div class="card-title" style="margin-bottom:8px">Dados encontrados</div>
-      <div id="pdf-tabela"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-        <button class="btn btn-outline" onclick="fecharModal('modal-pdf')">Cancelar</button>
-        <button class="btn btn-primary" onclick="aplicarDadosPDF()">Aplicar preços</button>
+      <div id="pdftab" class="table-wrap"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-outline" onclick="fecharM('mpdf')">Cancelar</button>
+        <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar preços</button>
       </div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:12px" id="pdf-cancel-btn">
-      <button class="btn btn-outline" onclick="fecharModal('modal-pdf')">Fechar</button>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px" id="pdfcancel">
+      <button class="btn btn-outline" onclick="fecharM('mpdf')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL WHATSAPP -->
+<div id="mwpp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(460px,96vw);margin:0;max-height:90vh;overflow-y:auto">
+    <div class="card-title">📲 Enviar lista por WhatsApp</div>
+    <p style="font-size:13px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor:</p>
+    <div id="wpplist"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-outline" onclick="fecharM('mwpp')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+</script>
+<style>
+:root{--verde:#1A6B4A;--verde2:#22885F;--verde-bg:#EAF4EF;--amarelo:#F5C842;--cinza1:#F7F8F7;--cinza2:#E8ECEB;--cinza3:#B0BAB7;--cinza4:#6B7876;--preto:#1A1E1D;--branco:#FFFFFF;--erro:#D94F3D;--alerta:#F59E0B;--sombra:0 2px 12px rgba(26,107,74,.10);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cinza1);color:var(--preto);min-height:100vh;font-size:15px;}
+header{background:var(--verde);color:var(--branco);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:30px;height:30px;background:var(--amarelo);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-size:14px;font-weight:600;}
+.logo-sub{font-size:10px;font-weight:300;opacity:.75;}
+.header-actions{display:flex;gap:6px;}
+.tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:13px 12px 11px;font-size:12px;font-weight:500;color:var(--cinza4);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
+.tab:hover{color:var(--verde);}
+.tab.active{color:var(--verde);border-bottom-color:var(--verde);}
+main{max-width:1100px;margin:0 auto;padding:20px 14px 60px;}
+.card{background:var(--branco);border-radius:12px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px;}
+.card-title{font-size:12px;font-weight:600;color:var(--verde);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+label{font-size:11px;font-weight:500;color:var(--cinza4);}
+input,select,textarea{border:1.5px solid var(--cinza2);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;color:var(--preto);background:var(--branco);transition:border-color .15s;width:100%;}
+input:focus,select:focus{outline:none;border-color:var(--verde);}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .18s;}
+.btn-primary{background:var(--verde);color:var(--branco);}
+.btn-primary:hover{background:var(--verde2);}
+.btn-outline{background:transparent;border:1.5px solid var(--cinza2);color:var(--cinza4);}
+.btn-outline:hover{border-color:var(--verde);color:var(--verde);}
+.btn-yellow{background:var(--amarelo);color:var(--preto);}
+.btn-yellow:hover{background:#e8ba2a;}
+.btn-green{background:#25D366;color:var(--branco);}
+.btn-green:hover{background:#1ebe5a;}
+.btn-danger{background:var(--erro);color:var(--branco);}
+.btn-danger:hover{background:#c0392b;}
+.btn-sm{padding:6px 11px;font-size:12px;}
+.btn-xs{padding:4px 8px;font-size:11px;}
+.forn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px;}
+.forn-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:5px;}
+.forn-card .fn{font-weight:600;font-size:13px;}
+.forn-card .fd{font-size:11px;color:var(--cinza4);}
+.forn-card .fa{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+.chip{display:inline-block;background:var(--verde-bg);color:var(--verde);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--cinza1);color:var(--cinza4);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 9px;text-align:left;white-space:nowrap;}
+thead th.fh{background:var(--verde-bg);color:var(--verde);text-align:center;}
+tbody tr{border-bottom:1px solid var(--cinza2);}
+tbody tr:hover{background:var(--cinza1);}
+td{padding:8px 9px;vertical-align:middle;}
+td.pn{font-weight:500;max-width:160px;}
+td.pc{text-align:center;}
+td.pc input{width:82px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;padding:4px 6px;}
+.mp{background:#DCFCE7!important;}
+.mp input{color:var(--verde);font-weight:600;}
+.wb{display:inline-block;background:var(--verde);color:var(--branco);border-radius:4px;padding:2px 6px;font-size:10px;font-family:'DM Mono',monospace;}
+td.pz input{width:56px;text-align:center;}
+td.dc input{width:56px;text-align:right;}
+td.vd input{width:105px;font-size:12px;}
+.placar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:8px;}
+.placar-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:14px;text-align:center;}
+.placar-card.cx{border-color:var(--amarelo);background:#FFFBEA;}
+.pn2{font-size:13px;font-weight:600;margin-bottom:4px;}
+.pnum{font-size:28px;font-weight:600;color:var(--verde);font-family:'DM Mono',monospace;}
+.plbl{font-size:11px;color:var(--cinza4);margin-top:2px;}
+.pdf-zone{border:2px dashed var(--cinza2);border-radius:10px;padding:22px;text-align:center;color:var(--cinza4);font-size:13px;cursor:pointer;transition:all .18s;}
+.pdf-zone:hover{border-color:var(--verde);color:var(--verde);background:var(--verde-bg);}
+.pi{font-size:28px;margin-bottom:6px;}
+.ph{font-size:11px;margin-top:5px;opacity:.7;}
+.empty{text-align:center;padding:32px 16px;color:var(--cinza3);}
+.ei{font-size:32px;margin-bottom:10px;}
+.et{font-size:13px;}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--preto);color:var(--branco);padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;white-space:nowrap;}
+#toast.show{opacity:1;}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#1A6B4A,#22885F);color:var(--branco);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--amarelo);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
+.st{font-size:16px;font-weight:600;}
+.panel{display:none;}
+.panel.active{display:block;}
+.av-box{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400E;margin-bottom:12px;}
+.combo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cinza2);flex-wrap:wrap;}
+.combo-row:last-child{border-bottom:none;}
+.cp1{font-weight:500;font-size:13px;flex:1;min-width:110px;}
+.cp2{font-size:12px;color:var(--verde);font-weight:600;}
+.cp3{font-family:'DM Mono',monospace;font-size:13px;}
+.cp4{font-size:11px;color:var(--cinza4);}
+.hi{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;margin-bottom:8px;}
+.hh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:5px;}
+.hd{font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace;}
+.hn{font-weight:600;font-size:13px;}
+.gw{position:relative;height:250px;}
+@media(max-width:600px){main{padding:12px 10px 50px;}header{padding:0 12px;}.card{padding:14px;}.logo-sub{display:none;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💊</div>
+    <div>
+      <div class="logo-text">MS Farma</div>
+      <div class="logo-sub">Cotação de Fornecedores</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲 WhatsApp</button>
+    <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Excel</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="abrirTab('fornecedores',this)">👥 Fornecedores</div>
+  <div class="tab" onclick="abrirTab('produtos',this)">📦 Produtos</div>
+  <div class="tab" onclick="abrirTab('cotacao',this)">📊 Comparativo</div>
+  <div class="tab" onclick="abrirTab('placar',this)">🏆 Placar</div>
+  <div class="tab" onclick="abrirTab('combo',this)">💡 Combo Ideal</div>
+  <div class="tab" onclick="abrirTab('graficos',this)">📈 Histórico</div>
+</div>
+
+<main>
+
+<div id="panel-fornecedores" class="panel active">
+  <div class="card">
+    <div class="sr"><div class="st">Fornecedores</div><button class="btn btn-primary btn-sm" onclick="abrirMF()">+ Adicionar</button></div>
+    <div id="lista-forn"></div>
+  </div>
+</div>
+
+<div id="panel-produtos" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Lista de Produtos</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="abrirMP()">+ Produto</button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('icsv').click()">⬆ Importar</button>
+        <input type="file" id="icsv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
+      </div>
+    </div>
+    <div id="lista-prod"></div>
+  </div>
+</div>
+
+<div id="panel-cotacao" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Comparativo de Preços</div><span class="ai-badge"><span class="ai-dot"></span> IA ativa</span></div>
+    <div id="av"></div>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Suba o PDF, PNG ou JPG do orçamento — a IA extrai os preços automaticamente.</p>
+    <div id="upload-forn" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+    <div class="table-wrap"><div id="tab-cot"></div></div>
+  </div>
+</div>
+
+<div id="panel-placar" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Placar Final</div><button class="btn btn-outline btn-sm" onclick="calcularPlacar()">↻ Atualizar</button></div>
+    <div id="placar"></div>
+  </div>
+</div>
+
+<div id="panel-combo" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">💡 Combinação Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">Qual fornecedor comprar cada produto para ter a maior economia total.</p>
+    <div id="combo"></div>
+  </div>
+</div>
+
+<div id="panel-graficos" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">📈 Histórico de Cotações</div>
+      <button class="btn btn-primary btn-sm" onclick="salvarHistorico()">💾 Salvar cotação atual</button>
+    </div>
+    <div id="hist"></div>
+  </div>
+  <div class="card" id="card-graf" style="display:none">
+    <div class="sr">
+      <div class="st">Evolução de Preços</div>
+      <select id="sel-prod" onchange="renderGrafico()" style="font-size:12px;padding:5px 9px;border-radius:7px;border:1.5px solid var(--cinza2)"></select>
+    </div>
+    <div class="gw"><canvas id="cgraf"></canvas></div>
+  </div>
+</div>
+
+</main>
+
+<!-- MODAL FORNECEDOR -->
+<div id="mforn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,94vw);margin:0">
+    <div class="card-title">📋 Fornecedor</div>
+    <input type="hidden" id="fid">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="fnome" placeholder="ex: Distribuidora Alfa"></div>
+      <div class="form-group"><label>WhatsApp</label><input id="ftel" placeholder="(85) 99999-9999"></div>
+      <div class="form-group"><label>Prazo padrão (dias)</label><input id="fprazo" type="number" placeholder="30"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="fecharM('mforn')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarF()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRODUTO -->
+<div id="mprod" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,94vw);margin:0">
+    <div class="card-title">📦 Produto</div>
+    <input type="hidden" id="pid">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="pnome" placeholder="ex: Dipirona 500mg 20cp"></div>
+      <div class="form-group"><label>Código / EAN</label><input id="pcodigo" placeholder="opcional"></div>
+      <div class="form-group"><label>Unidade</label>
+        <select id="punid"><option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option></select>
+      </div>
+      <div class="form-group"><label>Qtd. solicitada</label><input id="pqtd" type="number" placeholder="1" min="1"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="fecharM('mprod')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarP()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PDF/IMG -->
+<div id="mpdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(510px,96vw);margin:0;max-height:92vh;overflow-y:auto">
+    <div class="card-title">🤖 Leitura por IA · <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+    <div class="pdf-zone" onclick="document.getElementById('ipdf').click()" id="pdfzone">
+      <div class="pi">📄</div>
+      <div>Clique para selecionar o orçamento</div>
+      <div class="ph">PDF, PNG ou JPG — a IA lê automaticamente 🤖</div>
+    </div>
+    <input type="file" id="ipdf" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="processarArquivo(event)">
+    <div id="pdfstatus" style="margin-top:10px;font-size:13px;color:var(--cinza4)"></div>
+    <div id="pdfpreview" style="display:none;margin-top:10px">
+      <div class="card-title" style="margin-bottom:8px">Dados encontrados</div>
+      <div id="pdftab" class="table-wrap"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-outline" onclick="fecharM('mpdf')">Cancelar</button>
+        <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar preços</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px" id="pdfcancel">
+      <button class="btn btn-outline" onclick="fecharM('mpdf')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL WHATSAPP -->
+<div id="mwpp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(460px,96vw);margin:0;max-height:90vh;overflow-y:auto">
+    <div class="card-title">📲 Enviar lista por WhatsApp</div>
+    <p style="font-size:13px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor:</p>
+    <div id="wpplist"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-outline" onclick="fecharM('mwpp')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+</script>
+<style>
+:root{--verde:#1A6B4A;--verde2:#22885F;--verde-bg:#EAF4EF;--amarelo:#F5C842;--cinza1:#F7F8F7;--cinza2:#E8ECEB;--cinza3:#B0BAB7;--cinza4:#6B7876;--preto:#1A1E1D;--branco:#FFFFFF;--erro:#D94F3D;--alerta:#F59E0B;--sombra:0 2px 12px rgba(26,107,74,.10);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cinza1);color:var(--preto);min-height:100vh;font-size:15px;}
+header{background:var(--verde);color:var(--branco);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:30px;height:30px;background:var(--amarelo);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-size:14px;font-weight:600;}
+.logo-sub{font-size:10px;font-weight:300;opacity:.75;}
+.header-actions{display:flex;gap:6px;}
+.tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:13px 12px 11px;font-size:12px;font-weight:500;color:var(--cinza4);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
+.tab:hover{color:var(--verde);}
+.tab.active{color:var(--verde);border-bottom-color:var(--verde);}
+main{max-width:1100px;margin:0 auto;padding:20px 14px 60px;}
+.card{background:var(--branco);border-radius:12px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px;}
+.card-title{font-size:12px;font-weight:600;color:var(--verde);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+label{font-size:11px;font-weight:500;color:var(--cinza4);}
+input,select,textarea{border:1.5px solid var(--cinza2);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;color:var(--preto);background:var(--branco);transition:border-color .15s;width:100%;}
+input:focus,select:focus{outline:none;border-color:var(--verde);}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .18s;}
+.btn-primary{background:var(--verde);color:var(--branco);}
+.btn-primary:hover{background:var(--verde2);}
+.btn-outline{background:transparent;border:1.5px solid var(--cinza2);color:var(--cinza4);}
+.btn-outline:hover{border-color:var(--verde);color:var(--verde);}
+.btn-yellow{background:var(--amarelo);color:var(--preto);}
+.btn-yellow:hover{background:#e8ba2a;}
+.btn-green{background:#25D366;color:var(--branco);}
+.btn-green:hover{background:#1ebe5a;}
+.btn-danger{background:var(--erro);color:var(--branco);}
+.btn-danger:hover{background:#c0392b;}
+.btn-sm{padding:6px 11px;font-size:12px;}
+.btn-xs{padding:4px 8px;font-size:11px;}
+.forn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px;}
+.forn-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:5px;}
+.forn-card .fn{font-weight:600;font-size:13px;}
+.forn-card .fd{font-size:11px;color:var(--cinza4);}
+.forn-card .fa{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+.chip{display:inline-block;background:var(--verde-bg);color:var(--verde);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--cinza1);color:var(--cinza4);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 9px;text-align:left;white-space:nowrap;}
+thead th.fh{background:var(--verde-bg);color:var(--verde);text-align:center;}
+tbody tr{border-bottom:1px solid var(--cinza2);}
+tbody tr:hover{background:var(--cinza1);}
+td{padding:8px 9px;vertical-align:middle;}
+td.pn{font-weight:500;max-width:160px;}
+td.pc{text-align:center;}
+td.pc input{width:82px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;padding:4px 6px;}
+.mp{background:#DCFCE7!important;}
+.mp input{color:var(--verde);font-weight:600;}
+.wb{display:inline-block;background:var(--verde);color:var(--branco);border-radius:4px;padding:2px 6px;font-size:10px;font-family:'DM Mono',monospace;}
+td.pz input{width:56px;text-align:center;}
+td.dc input{width:56px;text-align:right;}
+td.vd input{width:105px;font-size:12px;}
+.placar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:8px;}
+.placar-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:14px;text-align:center;}
+.placar-card.cx{border-color:var(--amarelo);background:#FFFBEA;}
+.pn2{font-size:13px;font-weight:600;margin-bottom:4px;}
+.pnum{font-size:28px;font-weight:600;color:var(--verde);font-family:'DM Mono',monospace;}
+.plbl{font-size:11px;color:var(--cinza4);margin-top:2px;}
+.pdf-zone{border:2px dashed var(--cinza2);border-radius:10px;padding:22px;text-align:center;color:var(--cinza4);font-size:13px;cursor:pointer;transition:all .18s;}
+.pdf-zone:hover{border-color:var(--verde);color:var(--verde);background:var(--verde-bg);}
+.pi{font-size:28px;margin-bottom:6px;}
+.ph{font-size:11px;margin-top:5px;opacity:.7;}
+.empty{text-align:center;padding:32px 16px;color:var(--cinza3);}
+.ei{font-size:32px;margin-bottom:10px;}
+.et{font-size:13px;}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--preto);color:var(--branco);padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;white-space:nowrap;}
+#toast.show{opacity:1;}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#1A6B4A,#22885F);color:var(--branco);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--amarelo);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
+.st{font-size:16px;font-weight:600;}
+.panel{display:none;}
+.panel.active{display:block;}
+.av-box{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400E;margin-bottom:12px;}
+.combo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cinza2);flex-wrap:wrap;}
+.combo-row:last-child{border-bottom:none;}
+.cp1{font-weight:500;font-size:13px;flex:1;min-width:110px;}
+.cp2{font-size:12px;color:var(--verde);font-weight:600;}
+.cp3{font-family:'DM Mono',monospace;font-size:13px;}
+.cp4{font-size:11px;color:var(--cinza4);}
+.hi{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;margin-bottom:8px;}
+.hh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:5px;}
+.hd{font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace;}
+.hn{font-weight:600;font-size:13px;}
+.gw{position:relative;height:250px;}
+@media(max-width:600px){main{padding:12px 10px 50px;}header{padding:0 12px;}.card{padding:14px;}.logo-sub{display:none;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💊</div>
+    <div>
+      <div class="logo-text">MS Farma</div>
+      <div class="logo-sub">Cotação de Fornecedores</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲 WhatsApp</button>
+    <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Excel</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="abrirTab('fornecedores',this)">👥 Fornecedores</div>
+  <div class="tab" onclick="abrirTab('produtos',this)">📦 Produtos</div>
+  <div class="tab" onclick="abrirTab('cotacao',this)">📊 Comparativo</div>
+  <div class="tab" onclick="abrirTab('placar',this)">🏆 Placar</div>
+  <div class="tab" onclick="abrirTab('combo',this)">💡 Combo Ideal</div>
+  <div class="tab" onclick="abrirTab('graficos',this)">📈 Histórico</div>
+</div>
+
+<main>
+
+<div id="panel-fornecedores" class="panel active">
+  <div class="card">
+    <div class="sr"><div class="st">Fornecedores</div><button class="btn btn-primary btn-sm" onclick="abrirMF()">+ Adicionar</button></div>
+    <div id="lista-forn"></div>
+  </div>
+</div>
+
+<div id="panel-produtos" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Lista de Produtos</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="abrirMP()">+ Produto</button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('icsv').click()">⬆ Importar</button>
+        <input type="file" id="icsv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
+      </div>
+    </div>
+    <div id="lista-prod"></div>
+  </div>
+</div>
+
+<div id="panel-cotacao" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Comparativo de Preços</div><span class="ai-badge"><span class="ai-dot"></span> IA ativa</span></div>
+    <div id="av"></div>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Suba o PDF, PNG ou JPG do orçamento — a IA extrai os preços automaticamente.</p>
+    <div id="upload-forn" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+    <div class="table-wrap"><div id="tab-cot"></div></div>
+  </div>
+</div>
+
+<div id="panel-placar" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Placar Final</div><button class="btn btn-outline btn-sm" onclick="calcularPlacar()">↻ Atualizar</button></div>
+    <div id="placar"></div>
+  </div>
+</div>
+
+<div id="panel-combo" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">💡 Combinação Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">Qual fornecedor comprar cada produto para ter a maior economia total.</p>
+    <div id="combo"></div>
+  </div>
+</div>
+
+<div id="panel-graficos" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">📈 Histórico de Cotações</div>
+      <button class="btn btn-primary btn-sm" onclick="salvarHistorico()">💾 Salvar cotação atual</button>
+    </div>
+    <div id="hist"></div>
+  </div>
+  <div class="card" id="card-graf" style="display:none">
+    <div class="sr">
+      <div class="st">Evolução de Preços</div>
+      <select id="sel-prod" onchange="renderGrafico()" style="font-size:12px;padding:5px 9px;border-radius:7px;border:1.5px solid var(--cinza2)"></select>
+    </div>
+    <div class="gw"><canvas id="cgraf"></canvas></div>
+  </div>
+</div>
+
+</main>
+
+<!-- MODAL FORNECEDOR -->
+<div id="mforn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,94vw);margin:0">
+    <div class="card-title">📋 Fornecedor</div>
+    <input type="hidden" id="fid">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="fnome" placeholder="ex: Distribuidora Alfa"></div>
+      <div class="form-group"><label>WhatsApp</label><input id="ftel" placeholder="(85) 99999-9999"></div>
+      <div class="form-group"><label>Prazo padrão (dias)</label><input id="fprazo" type="number" placeholder="30"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="fecharM('mforn')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarF()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRODUTO -->
+<div id="mprod" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,94vw);margin:0">
+    <div class="card-title">📦 Produto</div>
+    <input type="hidden" id="pid">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="pnome" placeholder="ex: Dipirona 500mg 20cp"></div>
+      <div class="form-group"><label>Código / EAN</label><input id="pcodigo" placeholder="opcional"></div>
+      <div class="form-group"><label>Unidade</label>
+        <select id="punid"><option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option></select>
+      </div>
+      <div class="form-group"><label>Qtd. solicitada</label><input id="pqtd" type="number" placeholder="1" min="1"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="fecharM('mprod')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarP()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PDF/IMG -->
+<div id="mpdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(510px,96vw);margin:0;max-height:92vh;overflow-y:auto">
+    <div class="card-title">🤖 Leitura por IA · <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+    <div class="pdf-zone" onclick="document.getElementById('ipdf').click()" id="pdfzone">
+      <div class="pi">📄</div>
+      <div>Clique para selecionar o orçamento</div>
+      <div class="ph">PDF, PNG ou JPG — a IA lê automaticamente 🤖</div>
+    </div>
+    <input type="file" id="ipdf" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="processarArquivo(event)">
+    <div id="pdfstatus" style="margin-top:10px;font-size:13px;color:var(--cinza4)"></div>
+    <div id="pdfpreview" style="display:none;margin-top:10px">
+      <div class="card-title" style="margin-bottom:8px">Dados encontrados</div>
+      <div id="pdftab" class="table-wrap"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-outline" onclick="fecharM('mpdf')">Cancelar</button>
+        <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar preços</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px" id="pdfcancel">
+      <button class="btn btn-outline" onclick="fecharM('mpdf')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL WHATSAPP -->
+<div id="mwpp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div class="card" style="width:min(460px,96vw);margin:0;max-height:90vh;overflow-y:auto">
+    <div class="card-title">📲 Enviar lista por WhatsApp</div>
+    <p style="font-size:13px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor:</p>
+    <div id="wpplist"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-outline" onclick="fecharM('mwpp')">Fechar</button>
     </div>
   </div>
 </div>
@@ -489,598 +795,290 @@
 <div id="toast"></div>
 
 <script>
-// ════════════════ STATE ════════════════
-let state = {
-  fornecedores: [],
-  produtos: [],
-  cotacoes: {} // { prodId: { fornId: { preco, prazo, desconto } } }
-};
-let pdfDadosTemp = [];
-let pdfFornIdTemp = null;
+let S={fornecedores:[],produtos:[],cotacoes:{},historico:[]};
+let pdfDados=[],pdfFornId=null,chartIns=null;
 
-// ════════════════ STORAGE ════════════════
-function salvar() {
-  localStorage.setItem('msfarma_cotacao', JSON.stringify(state));
-}
-function carregar() {
-  const d = localStorage.getItem('msfarma_cotacao');
-  if (d) state = JSON.parse(d);
-}
+function salvar(){localStorage.setItem('msfarma_cot_v3',JSON.stringify(S));}
+function carregar(){const d=localStorage.getItem('msfarma_cot_v3');if(d)S=JSON.parse(d);if(!S.historico)S.historico=[];}
 carregar();
 
-// ════════════════ UTILS ════════════════
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-function toast(msg, dur=2800) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), dur);
-}
-function fecharModal(id) {
-  document.getElementById(id).style.display = 'none';
-}
-function abrirModal(id) {
-  document.getElementById(id).style.display = 'flex';
-}
-function moeda(v) {
-  if (!v && v !== 0) return '';
-  return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d);}
+function fecharM(id){document.getElementById(id).style.display='none';}
+function abrirM(id){document.getElementById(id).style.display='flex';}
+function moeda(v){if(!v&&v!==0)return'';return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function hoje(){return new Date().toISOString().split('T')[0];}
+function vencido(d){return d&&d<hoje();}
+function proximo(d){if(!d)return false;const df=(new Date(d)-new Date())/86400000;return df>=0&&df<=5;}
 
-// ════════════════ TABS ════════════════
-function abrirTab(nome, el) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('panel-' + nome).classList.add('active');
-  el.classList.add('active');
-  if (nome === 'cotacao') renderCotacao();
-  if (nome === 'placar') calcularPlacar();
-  if (nome === 'produtos') renderProdutos();
-  if (nome === 'fornecedores') renderFornecedores();
+function abrirTab(n,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');el.classList.add('active');
+  if(n==='cotacao')renderCot();if(n==='placar')calcularPlacar();
+  if(n==='produtos')renderProd();if(n==='fornecedores')renderForn();
+  if(n==='combo')calcularCombo();if(n==='graficos')renderHist();
 }
 
-// ════════════════ FORNECEDORES ════════════════
-function abrirModalFornecedor(id) {
-  document.getElementById('forn-id').value = id || '';
-  if (id) {
-    const f = state.fornecedores.find(x => x.id === id);
-    document.getElementById('forn-nome').value = f.nome;
-    document.getElementById('forn-contato').value = f.contato || '';
-    document.getElementById('forn-prazo').value = f.prazo || '';
-    document.getElementById('forn-obs').value = f.obs || '';
-  } else {
-    ['forn-nome','forn-contato','forn-prazo','forn-obs'].forEach(x => document.getElementById(x).value = '');
-  }
-  abrirModal('modal-forn');
-  setTimeout(() => document.getElementById('forn-nome').focus(), 80);
+// FORNECEDORES
+function abrirMF(id){
+  document.getElementById('fid').value=id||'';
+  if(id){const f=S.fornecedores.find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';}
+  else{['fnome','ftel','fprazo','fobs'].forEach(x=>document.getElementById(x).value='');}
+  abrirM('mforn');setTimeout(()=>document.getElementById('fnome').focus(),80);
+}
+function salvarF(){
+  const nome=document.getElementById('fnome').value.trim();if(!nome){toast('⚠️ Informe o nome');return;}
+  const id=document.getElementById('fid').value||uid();
+  const obj={id,nome,contato:document.getElementById('ftel').value.trim(),prazo:document.getElementById('fprazo').value,obs:document.getElementById('fobs').value.trim()};
+  const i=S.fornecedores.findIndex(x=>x.id===id);if(i>=0)S.fornecedores[i]=obj;else S.fornecedores.push(obj);
+  salvar();renderForn();fecharM('mforn');toast('✅ Fornecedor salvo');
+}
+function excluirF(id){
+  if(!confirm('Remover fornecedor?'))return;
+  S.fornecedores=S.fornecedores.filter(x=>x.id!==id);
+  Object.keys(S.cotacoes).forEach(pid=>{delete S.cotacoes[pid][id];});
+  salvar();renderForn();toast('🗑 Removido');
+}
+function renderForn(){
+  const el=document.getElementById('lista-forn');
+  if(!S.fornecedores.length){el.innerHTML=`<div class="empty"><div class="ei">🏪</div><div class="et">Nenhum fornecedor. Clique em "+ Adicionar".</div></div>`;return;}
+  el.innerHTML=`<div class="forn-grid">${S.fornecedores.map(f=>`<div class="forn-card"><div class="fn">${f.nome}</div>${f.contato?`<div class="fd">📞 ${f.contato}</div>`:''} ${f.prazo?`<div class="fd">📅 ${f.prazo} dias</div>`:''} ${f.obs?`<div class="fd">💬 ${f.obs}</div>`:''}<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF('${f.id}')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF('${f.id}')">🗑</button></div></div>`).join('')}</div>`;
+}
+renderForn();
+
+// PRODUTOS
+function abrirMP(id){
+  document.getElementById('pid').value=id||'';
+  if(id){const p=S.produtos.find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;}
+  else{['pnome','pcodigo'].forEach(x=>document.getElementById(x).value='');document.getElementById('punid').value='CX';document.getElementById('pqtd').value=1;}
+  abrirM('mprod');setTimeout(()=>document.getElementById('pnome').focus(),80);
+}
+function salvarP(){
+  const nome=document.getElementById('pnome').value.trim();if(!nome){toast('⚠️ Informe o nome');return;}
+  const id=document.getElementById('pid').value||uid();
+  const obj={id,nome,codigo:document.getElementById('pcodigo').value.trim(),unidade:document.getElementById('punid').value,qtd:parseInt(document.getElementById('pqtd').value)||1};
+  const i=S.produtos.findIndex(x=>x.id===id);if(i>=0)S.produtos[i]=obj;else S.produtos.push(obj);
+  salvar();renderProd();fecharM('mprod');toast('✅ Produto salvo');
+}
+function excluirP(id){
+  if(!confirm('Remover produto?'))return;
+  S.produtos=S.produtos.filter(x=>x.id!==id);delete S.cotacoes[id];
+  salvar();renderProd();toast('🗑 Removido');
+}
+function renderProd(){
+  const el=document.getElementById('lista-prod');
+  if(!S.produtos.length){el.innerHTML=`<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto. Adicione ou importe .txt (um por linha).</div></div>`;return;}
+  el.innerHTML=`<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Código</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>${S.produtos.map((p,i)=>`<tr><td style="color:var(--cinza3);font-size:11px;font-family:'DM Mono',monospace">${String(i+1).padStart(2,'0')}</td><td class="pn">${p.nome}</td><td style="font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace">${p.codigo||'—'}</td><td style="text-align:center">${p.qtd}</td><td><span class="chip">${p.unidade}</span></td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-xs" onclick="abrirMP('${p.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="excluirP('${p.id}')">🗑</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+renderProd();
+
+function importarCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const linhas=ev.target.result.split('\n').map(l=>l.trim()).filter(Boolean);let added=0;
+    linhas.forEach(l=>{const p=l.split(/[,;\t]/);let nome,codigo='';if(p.length>=2){codigo=p[0].trim();nome=p[1].trim();}else nome=p[0].trim();
+    if(nome&&!S.produtos.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){S.produtos.push({id:uid(),nome,codigo,unidade:'CX',qtd:1});added++;}});
+    salvar();renderProd();toast(`✅ ${added} produto(s) importado(s)`);e.target.value='';
+  };r.readAsText(file);
 }
 
-function salvarFornecedor() {
-  const nome = document.getElementById('forn-nome').value.trim();
-  if (!nome) { toast('⚠️ Informe o nome do fornecedor'); return; }
-  const id = document.getElementById('forn-id').value || uid();
-  const obj = {
-    id, nome,
-    contato: document.getElementById('forn-contato').value.trim(),
-    prazo: document.getElementById('forn-prazo').value,
-    obs: document.getElementById('forn-obs').value.trim()
-  };
-  const idx = state.fornecedores.findIndex(x => x.id === id);
-  if (idx >= 0) state.fornecedores[idx] = obj;
-  else state.fornecedores.push(obj);
-  salvar(); renderFornecedores(); fecharModal('modal-forn');
-  toast('✅ Fornecedor salvo');
+// COTAÇÃO
+function renderCot(){
+  const upEl=document.getElementById('upload-forn'),tabEl=document.getElementById('tab-cot'),avEl=document.getElementById('av');
+  if(!S.fornecedores.length||!S.produtos.length){upEl.innerHTML='';tabEl.innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Cadastre fornecedores e produtos primeiro.</div></div>`;avEl.innerHTML='';return;}
+
+  let alertas=[];
+  S.fornecedores.forEach(f=>S.produtos.forEach(p=>{const c=S.cotacoes[p.id]?.[f.id]||{};
+    if(c.validade){if(vencido(c.validade))alertas.push(`⛔ <b>${f.nome}</b> › ${p.nome} — preço <b>vencido</b> (${c.validade})`);
+    else if(proximo(c.validade))alertas.push(`⚠️ <b>${f.nome}</b> › ${p.nome} — vence em ${c.validade}`);}
+  }));
+  avEl.innerHTML=alertas.map(a=>`<div class="av-box">${a}</div>`).join('');
+
+  upEl.innerHTML=S.fornecedores.map(f=>`<button class="btn btn-outline btn-sm" onclick="abrirUpload('${f.id}')">📄 PDF/IMG — ${f.nome}</button>`).join('');
+  S.produtos.forEach(p=>{if(!S.cotacoes[p.id])S.cotacoes[p.id]={};});
+
+  function melhor(pid){const c=S.cotacoes[pid]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return mf;}
+
+  tabEl.innerHTML=`<table><thead><tr><th>Produto</th><th>Qtd</th>${S.fornecedores.map(f=>`<th class="fh" colspan="4">${f.nome}</th>`).join('')}</tr><tr><th></th><th></th>${S.fornecedores.map(()=>`<th class="fh" style="font-size:9px">Preço R$</th><th class="fh" style="font-size:9px">Prazo</th><th class="fh" style="font-size:9px">Desc.%</th><th class="fh" style="font-size:9px">Validade</th>`).join('')}</tr></thead><tbody>${S.produtos.map(p=>{const mf=melhor(p.id);return`<tr><td class="pn">${p.nome}</td><td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px">${p.qtd}</td>${S.fornecedores.map(f=>{const c=S.cotacoes[p.id]?.[f.id]||{};const im=mf===f.id;const venc=vencido(c.validade);const prox=proximo(c.validade);return`<td class="pc ${im?'mp':''}"><input type="number" min="0" step="0.01" value="${c.preco||''}" placeholder="0,00" onchange="setC('${p.id}','${f.id}','preco',this.value)"></td><td class="pz"><input type="number" min="0" value="${c.prazo||''}" placeholder="${S.fornecedores.find(x=>x.id===f.id)?.prazo||''}" onchange="setC('${p.id}','${f.id}','prazo',this.value)"></td><td class="dc"><input type="number" min="0" max="100" step="0.1" value="${c.desconto||''}" placeholder="0" onchange="setC('${p.id}','${f.id}','desconto',this.value)"></td><td class="vd"><input type="date" value="${c.validade||''}" style="${venc?'border-color:var(--erro);color:var(--erro)':prox?'border-color:var(--alerta);color:#92400E':''}" onchange="setC('${p.id}','${f.id}','validade',this.value)"></td>`;}).join('')}</tr>`;}).join('')}</tbody></table>`;
 }
 
-function excluirFornecedor(id) {
-  if (!confirm('Remover este fornecedor? Os preços dele serão apagados.')) return;
-  state.fornecedores = state.fornecedores.filter(x => x.id !== id);
-  Object.keys(state.cotacoes).forEach(pid => { delete state.cotacoes[pid][id]; });
-  salvar(); renderFornecedores(); toast('🗑 Fornecedor removido');
-}
-
-function renderFornecedores() {
-  const el = document.getElementById('lista-fornecedores');
-  if (!state.fornecedores.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🏪</div><div class="empty-text">Nenhum fornecedor cadastrado.<br>Clique em "Adicionar" para começar.</div></div>`;
-    return;
-  }
-  el.innerHTML = `<div class="fornecedor-grid">${state.fornecedores.map(f => `
-    <div class="fornecedor-card">
-      <div class="fnome">${f.nome}</div>
-      ${f.contato ? `<div class="fdado">📞 ${f.contato}</div>` : ''}
-      ${f.prazo ? `<div class="fdado">📅 Prazo: ${f.prazo} dias</div>` : ''}
-      ${f.obs ? `<div class="fdado">💬 ${f.obs}</div>` : ''}
-      <div class="factions">
-        <button class="btn btn-outline btn-sm" onclick="abrirModalFornecedor('${f.id}')">✏️ Editar</button>
-        <button class="btn btn-danger" onclick="excluirFornecedor('${f.id}')">🗑</button>
-      </div>
-    </div>`).join('')}</div>`;
-}
-renderFornecedores();
-
-// ════════════════ PRODUTOS ════════════════
-function abrirModalProduto(id) {
-  document.getElementById('prod-id').value = id || '';
-  if (id) {
-    const p = state.produtos.find(x => x.id === id);
-    document.getElementById('prod-nome').value = p.nome;
-    document.getElementById('prod-codigo').value = p.codigo || '';
-    document.getElementById('prod-unidade').value = p.unidade || 'CX';
-    document.getElementById('prod-qtd').value = p.qtd || 1;
-  } else {
-    ['prod-nome','prod-codigo'].forEach(x => document.getElementById(x).value = '');
-    document.getElementById('prod-unidade').value = 'CX';
-    document.getElementById('prod-qtd').value = 1;
-  }
-  abrirModal('modal-prod');
-  setTimeout(() => document.getElementById('prod-nome').focus(), 80);
-}
-
-function salvarProduto() {
-  const nome = document.getElementById('prod-nome').value.trim();
-  if (!nome) { toast('⚠️ Informe o nome do produto'); return; }
-  const id = document.getElementById('prod-id').value || uid();
-  const obj = {
-    id, nome,
-    codigo: document.getElementById('prod-codigo').value.trim(),
-    unidade: document.getElementById('prod-unidade').value,
-    qtd: parseInt(document.getElementById('prod-qtd').value) || 1
-  };
-  const idx = state.produtos.findIndex(x => x.id === id);
-  if (idx >= 0) state.produtos[idx] = obj;
-  else state.produtos.push(obj);
-  salvar(); renderProdutos(); fecharModal('modal-prod');
-  toast('✅ Produto salvo');
-}
-
-function excluirProduto(id) {
-  if (!confirm('Remover este produto?')) return;
-  state.produtos = state.produtos.filter(x => x.id !== id);
-  delete state.cotacoes[id];
-  salvar(); renderProdutos(); toast('🗑 Produto removido');
-}
-
-function renderProdutos() {
-  const el = document.getElementById('lista-produtos');
-  if (!state.produtos.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Nenhum produto. Adicione manualmente ou importe uma lista (.csv ou .txt, um produto por linha).</div></div>`;
-    return;
-  }
-  el.innerHTML = `<table>
-    <thead><tr>
-      <th>#</th><th>Produto</th><th>Código</th><th>Qtd</th><th>Un</th><th></th>
-    </tr></thead>
-    <tbody>${state.produtos.map((p,i) => `
-      <tr>
-        <td style="color:var(--cinza3);font-size:12px;font-family:'DM Mono',monospace">${String(i+1).padStart(2,'0')}</td>
-        <td class="produto-nome">${p.nome}</td>
-        <td style="font-size:12px;color:var(--cinza4);font-family:'DM Mono',monospace">${p.codigo || '—'}</td>
-        <td style="text-align:center">${p.qtd}</td>
-        <td><span class="chip">${p.unidade}</span></td>
-        <td style="display:flex;gap:6px">
-          <button class="btn btn-outline btn-sm" onclick="abrirModalProduto('${p.id}')">✏️</button>
-          <button class="btn btn-danger" onclick="excluirProduto('${p.id}')">🗑</button>
-        </td>
-      </tr>`).join('')}
-    </tbody>
-  </table>`;
-}
-renderProdutos();
-
-function importarCSV(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const linhas = ev.target.result.split('\n').map(l => l.trim()).filter(Boolean);
-    let added = 0;
-    linhas.forEach(linha => {
-      // suporte a CSV (col1=codigo, col2=nome) ou TXT (apenas nome)
-      const partes = linha.split(/[,;	]/);
-      let nome, codigo = '';
-      if (partes.length >= 2) { codigo = partes[0].trim(); nome = partes[1].trim(); }
-      else { nome = partes[0].trim(); }
-      if (nome && !state.produtos.find(p => p.nome.toLowerCase() === nome.toLowerCase())) {
-        state.produtos.push({ id: uid(), nome, codigo, unidade: 'CX', qtd: 1 });
-        added++;
-      }
-    });
-    salvar(); renderProdutos();
-    toast(`✅ ${added} produto(s) importado(s)`);
-    e.target.value = '';
-  };
-  reader.readAsText(file);
-}
-
-// ════════════════ COTAÇÃO ════════════════
-function renderCotacao() {
-  const uploadEl = document.getElementById('upload-fornecedores');
-  const tabelaEl = document.getElementById('tabela-cotacao');
-
-  if (!state.fornecedores.length || !state.produtos.length) {
-    uploadEl.innerHTML = '';
-    tabelaEl.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Cadastre fornecedores e produtos nas abas anteriores para montar o comparativo.</div></div>`;
-    return;
-  }
-
-  // Botões de upload por fornecedor
-  uploadEl.innerHTML = state.fornecedores.map(f => `
-    <button class="btn btn-outline btn-sm" onclick="abrirUploadPDF('${f.id}')">
-      📄 PDF — ${f.nome}
-    </button>`).join('');
-
-  // Inicializa cotacoes
-  state.produtos.forEach(p => {
-    if (!state.cotacoes[p.id]) state.cotacoes[p.id] = {};
-  });
-
-  // Destaca menor preço por produto
-  function menorPreco(prodId) {
-    const c = state.cotacoes[prodId] || {};
-    let min = Infinity, minForn = null;
-    state.fornecedores.forEach(f => {
-      const v = parseFloat(c[f.id]?.preco);
-      if (!isNaN(v) && v > 0 && v < min) { min = v; minForn = f.id; }
-    });
-    return minForn;
-  }
-
-  tabelaEl.innerHTML = `<table>
-    <thead>
-      <tr>
-        <th>Produto</th>
-        <th>Qtd</th>
-        ${state.fornecedores.map(f => `<th class="forn-col" colspan="3">${f.nome}</th>`).join('')}
-      </tr>
-      <tr>
-        <th></th><th></th>
-        ${state.fornecedores.map(() => `
-          <th class="forn-col" style="font-size:10px">Preço R$</th>
-          <th class="forn-col" style="font-size:10px">Prazo</th>
-          <th class="forn-col" style="font-size:10px">Desc.%</th>`).join('')}
-      </tr>
-    </thead>
-    <tbody>
-      ${state.produtos.map(p => {
-        const melhor = menorPreco(p.id);
-        return `<tr>
-          <td class="produto-nome">${p.nome}</td>
-          <td style="text-align:center;font-family:'DM Mono',monospace;font-size:12px">${p.qtd}</td>
-          ${state.fornecedores.map(f => {
-            const c = state.cotacoes[p.id]?.[f.id] || {};
-            const isMelhor = melhor === f.id;
-            return `
-              <td class="preco-cell ${isMelhor ? 'melhor-preco' : ''}">
-                <input type="number" min="0" step="0.01"
-                  value="${c.preco || ''}"
-                  placeholder="0,00"
-                  onchange="setCotacao('${p.id}','${f.id}','preco',this.value)"
-                  title="${isMelhor ? '✅ Menor preço' : ''}">
-              </td>
-              <td class="prazo-cell">
-                <input type="number" min="0"
-                  value="${c.prazo || ''}"
-                  placeholder="${state.fornecedores.find(x=>x.id===f.id)?.prazo || ''}"
-                  onchange="setCotacao('${p.id}','${f.id}','prazo',this.value)">
-              </td>
-              <td class="desconto-cell">
-                <input type="number" min="0" max="100" step="0.1"
-                  value="${c.desconto || ''}"
-                  placeholder="0"
-                  onchange="setCotacao('${p.id}','${f.id}','desconto',this.value)">
-              </td>`;
-          }).join('')}
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>`;
-}
-
-function setCotacao(prodId, fornId, campo, valor) {
-  if (!state.cotacoes[prodId]) state.cotacoes[prodId] = {};
-  if (!state.cotacoes[prodId][fornId]) state.cotacoes[prodId][fornId] = {};
-  state.cotacoes[prodId][fornId][campo] = valor;
+function setC(pid,fid,k,v){
+  if(!S.cotacoes[pid])S.cotacoes[pid]={};
+  if(!S.cotacoes[pid][fid])S.cotacoes[pid][fid]={};
+  S.cotacoes[pid][fid][k]=v;
   salvar();
-  // Re-render destaques sem recriar inputs
-  atualizarDestaques();
-}
-
-function atualizarDestaques() {
-  // recalcula melhor preço e atualiza classes
-  state.produtos.forEach(p => {
-    const c = state.cotacoes[p.id] || {};
-    let min = Infinity, minForn = null;
-    state.fornecedores.forEach(f => {
-      const v = parseFloat(c[f.id]?.preco);
-      if (!isNaN(v) && v > 0 && v < min) { min = v; minForn = f.id; }
-    });
-    state.fornecedores.forEach(f => {
-      // localizar td pela ordem
-      const rows = document.querySelectorAll('#tabela-cotacao tbody tr');
-      const rowIdx = state.produtos.findIndex(x => x.id === p.id);
-      const colIdx = state.fornecedores.findIndex(x => x.id === f.id);
-      if (rows[rowIdx]) {
-        // 2 colunas fixas (produto, qtd) + colIdx * 3
-        const tdIdx = 2 + colIdx * 3;
-        const td = rows[rowIdx].cells[tdIdx];
-        if (td) {
-          td.classList.toggle('melhor-preco', f.id === minForn && minForn !== null);
-        }
+  atuDest();
+  let alertas=[];
+  S.fornecedores.forEach(function(f){
+    S.produtos.forEach(function(p){
+      var c=S.cotacoes[p.id]&&S.cotacoes[p.id][f.id]?S.cotacoes[p.id][f.id]:{};
+      if(c.validade){
+        if(vencido(c.validade)) alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco vencido');
+        else if(proximo(c.validade)) alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);
       }
     });
   });
+  document.getElementById('av').innerHTML=alertas.map(function(a){return '<div class="av-box">'+a+'</div>';}).join('');
 }
 
-// ════════════════ PDF IA ════════════════
-function abrirUploadPDF(fornId) {
-  pdfFornIdTemp = fornId;
-  pdfDadosTemp = [];
-  const f = state.fornecedores.find(x => x.id === fornId);
-  document.getElementById('pdf-forn-nome').textContent = `· ${f.nome}`;
-  document.getElementById('pdf-forn-id').value = fornId;
-  document.getElementById('pdf-status').textContent = '';
-  document.getElementById('pdf-preview').style.display = 'none';
-  document.getElementById('pdf-cancel-btn').style.display = 'flex';
-  document.getElementById('input-pdf').value = '';
-  abrirModal('modal-pdf');
-}
-
-async function processarPDF(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const statusEl = document.getElementById('pdf-status');
-  const previewEl = document.getElementById('pdf-preview');
-  document.getElementById('pdf-cancel-btn').style.display = 'none';
-
-  statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span> Lendo o PDF com IA... aguarde</div>`;
-  previewEl.style.display = 'none';
-
-  // Converte PDF para base64
-  const base64 = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = () => rej(new Error('Erro ao ler arquivo'));
-    r.readAsDataURL(file);
-  });
-
-  const produtosLista = state.produtos.map((p,i) => `${i+1}. ${p.nome}${p.codigo ? ' ['+p.codigo+']' : ''}`).join('\n');
-
-  const prompt = `Você é um assistente de cotação de farmácia. Analise este PDF de orçamento/cotação de um distribuidor farmacêutico.
-
-Minha lista de produtos que estou cotando:
-${produtosLista}
-
-Extraia do PDF os preços de cada produto. Para cada produto encontrado, forneça:
-- nome exato do produto no PDF
-- preço unitário (número puro, sem R$)
-- prazo de pagamento em dias (se houver, número puro)
-- desconto percentual (se houver, número puro sem %)
-- qual item da minha lista corresponde (número do índice, 1-based, ou null se não encontrar)
-
-Responda APENAS com JSON no formato:
-{
-  "itens": [
-    {
-      "nomePDF": "nome no pdf",
-      "preco": 12.50,
-      "prazo": 30,
-      "desconto": 5,
-      "idxMinha": 1
-    }
-  ]
-}
-Se não encontrar o produto, não inclua na lista. Sem texto extra, apenas JSON.`;
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
+function atuDest(){
+  S.produtos.forEach(p=>{
+    const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;
+    S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});
+    S.fornecedores.forEach(f=>{
+      const rows=document.querySelectorAll('#tab-cot tbody tr');const ri=S.produtos.findIndex(x=>x.id===p.id);const ci=S.fornecedores.findIndex(x=>x.id===f.id);
+      if(rows[ri]){const ti=2+ci*4;const td=rows[ri].cells[ti];if(td)td.classList.toggle('mp',f.id===mf&&mf!==null);}
     });
-    const data = await resp.json();
-    const texto = data.content.map(b => b.text || '').join('');
-    const clean = texto.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(clean);
-    pdfDadosTemp = parsed.itens || [];
-
-    if (!pdfDadosTemp.length) {
-      statusEl.innerHTML = `<span style="color:var(--erro)">⚠️ Nenhum produto encontrado no PDF. Verifique se o arquivo é legível.</span>`;
-      document.getElementById('pdf-cancel-btn').style.display = 'flex';
-      return;
-    }
-
-    // Mostra preview
-    statusEl.innerHTML = `<span style="color:var(--verde)">✅ ${pdfDadosTemp.length} item(s) encontrado(s)</span>`;
-    const tbody = pdfDadosTemp.map(item => {
-      const meu = item.idxMinha ? state.produtos[item.idxMinha - 1] : null;
-      return `<tr>
-        <td style="font-size:12px">${item.nomePDF}</td>
-        <td style="font-family:'DM Mono',monospace;font-size:13px">${moeda(item.preco)}</td>
-        <td style="text-align:center">${item.prazo || '—'}</td>
-        <td style="text-align:center">${item.desconto ? item.desconto+'%' : '—'}</td>
-        <td style="font-size:12px;color:var(--verde)">${meu ? '✅ '+meu.nome : '❓ Não mapeado'}</td>
-      </tr>`;
-    }).join('');
-    document.getElementById('pdf-tabela').innerHTML = `<table>
-      <thead><tr><th>No PDF</th><th>Preço</th><th>Prazo</th><th>Desc.</th><th>Meu produto</th></tr></thead>
-      <tbody>${tbody}</tbody>
-    </table>`;
-    previewEl.style.display = 'block';
-
-  } catch(err) {
-    statusEl.innerHTML = `<span style="color:var(--erro)">❌ Erro ao processar: ${err.message}</span>`;
-    document.getElementById('pdf-cancel-btn').style.display = 'flex';
-  }
-}
-
-function aplicarDadosPDF() {
-  const fornId = pdfFornIdTemp;
-  let aplicados = 0;
-  pdfDadosTemp.forEach(item => {
-    if (!item.idxMinha) return;
-    const prod = state.produtos[item.idxMinha - 1];
-    if (!prod) return;
-    if (!state.cotacoes[prod.id]) state.cotacoes[prod.id] = {};
-    state.cotacoes[prod.id][fornId] = {
-      preco: item.preco || '',
-      prazo: item.prazo || '',
-      desconto: item.desconto || ''
-    };
-    aplicados++;
-  });
-  salvar();
-  fecharModal('modal-pdf');
-  toast(`✅ ${aplicados} preço(s) aplicado(s) — reabra o Comparativo`);
-}
-
-// ════════════════ PLACAR ════════════════
-function calcularPlacar() {
-  const el = document.getElementById('conteudo-placar');
-  if (!state.fornecedores.length || !state.produtos.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🏆</div><div class="empty-text">Cadastre fornecedores e produtos primeiro.</div></div>`;
-    return;
-  }
-
-  const scores = {};
-  const totais = {};
-  state.fornecedores.forEach(f => { scores[f.id] = 0; totais[f.id] = 0; });
-
-  let produtosComDados = 0;
-  state.produtos.forEach(p => {
-    const c = state.cotacoes[p.id] || {};
-    let min = Infinity, minForn = null;
-    state.fornecedores.forEach(f => {
-      const v = parseFloat(c[f.id]?.preco);
-      if (!isNaN(v) && v > 0) {
-        totais[f.id] += v * (p.qtd || 1);
-        if (v < min) { min = v; minForn = f.id; }
-      }
-    });
-    if (minForn) { scores[minForn]++; produtosComDados++; }
-  });
-
-  if (!produtosComDados) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Preencha os preços no Comparativo para ver o placar.</div></div>`;
-    return;
-  }
-
-  const maxScore = Math.max(...Object.values(scores));
-  const sorted = [...state.fornecedores].sort((a,b) => scores[b.id] - scores[a.id]);
-
-  el.innerHTML = `
-    <p style="font-size:13px;color:var(--cinza4);margin-bottom:16px">Baseado em <strong>${produtosComDados}</strong> produto(s) com preços informados.</p>
-    <div class="placar-grid">
-      ${sorted.map((f,i) => {
-        const isCampeao = scores[f.id] === maxScore && maxScore > 0;
-        return `<div class="placar-card ${isCampeao ? 'campeao' : ''}">
-          ${isCampeao ? '<div class="corona">👑</div>' : ''}
-          <div class="placar-nome">${f.nome}</div>
-          <div class="placar-num">${scores[f.id]}</div>
-          <div class="placar-label">item(s) mais barato(s)</div>
-          ${totais[f.id] > 0 ? `<div style="margin-top:8px;font-size:12px;color:var(--cinza4)">Total: ${moeda(totais[f.id])}</div>` : ''}
-        </div>`;
-      }).join('')}
-    </div>
-
-    <div class="card" style="margin-top:20px;padding:18px">
-      <div class="card-title">📋 Resumo por Produto</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Produto</th>
-            ${state.fornecedores.map(f => `<th style="text-align:center">${f.nome}</th>`).join('')}
-            <th>🏆 Menor preço</th>
-          </tr></thead>
-          <tbody>
-            ${state.produtos.map(p => {
-              const c = state.cotacoes[p.id] || {};
-              let min = Infinity, minForn = null;
-              state.fornecedores.forEach(f => {
-                const v = parseFloat(c[f.id]?.preco);
-                if (!isNaN(v) && v > 0 && v < min) { min = v; minForn = f.id; }
-              });
-              return `<tr>
-                <td class="produto-nome">${p.nome}</td>
-                ${state.fornecedores.map(f => {
-                  const v = parseFloat(c[f.id]?.preco);
-                  const isMelhor = minForn === f.id;
-                  return `<td style="text-align:center;font-family:'DM Mono',monospace;font-size:13px;${isMelhor?'color:var(--verde);font-weight:600':''}">
-                    ${!isNaN(v) && v > 0 ? moeda(v) : '—'}
-                  </td>`;
-                }).join('')}
-                <td style="text-align:center">
-                  ${minForn ? `<span class="winner-badge">${state.fornecedores.find(f=>f.id===minForn)?.nome}</span>` : '—'}
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
-}
-
-// ════════════════ EXPORTAR ════════════════
-function exportarExcel() {
-  if (!state.produtos.length || !state.fornecedores.length) {
-    toast('⚠️ Nada para exportar ainda'); return;
-  }
-  let csv = 'Produto;Qtd;Un;';
-  csv += state.fornecedores.map(f => `${f.nome} - Preço;${f.nome} - Prazo;${f.nome} - Desc%`).join(';');
-  csv += ';Fornecedor Vencedor\n';
-
-  state.produtos.forEach(p => {
-    const c = state.cotacoes[p.id] || {};
-    let min = Infinity, minForn = null;
-    state.fornecedores.forEach(f => {
-      const v = parseFloat(c[f.id]?.preco);
-      if (!isNaN(v) && v > 0 && v < min) { min = v; minForn = f.id; }
-    });
-    csv += `"${p.nome}";${p.qtd};${p.unidade};`;
-    csv += state.fornecedores.map(f => {
-      const ct = c[f.id] || {};
-      return `${ct.preco||''};${ct.prazo||''};${ct.desconto||''}`;
-    }).join(';');
-    csv += `;${minForn ? state.fornecedores.find(f=>f.id===minForn)?.nome : ''}\n`;
-  });
-
-  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `cotacao_msfarma_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
-  a.click();
-  toast('📥 Exportado com sucesso!');
-}
-
-// ════════════════ DRAG & DROP PDF ════════════════
-const dropZone = document.getElementById('pdf-drop');
-if (dropZone) {
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background = 'var(--verde-bg)'; });
-  dropZone.addEventListener('dragleave', () => { dropZone.style.background = ''; });
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault(); dropZone.style.background = '';
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
-      const dt = new DataTransfer(); dt.items.add(file);
-      document.getElementById('input-pdf').files = dt.files;
-      processarPDF({ target: { files: [file] } });
-    }
   });
 }
 
-// Fechar modais clicando no fundo
-['modal-forn','modal-pdf','modal-prod'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e) {
-    if (e.target === this) fecharModal(id);
-  });
-});
+// PDF/IMG IA
+function abrirUpload(fid){
+  pdfFornId=fid;pdfDados=[];const f=S.fornecedores.find(x=>x.id===fid);
+  document.getElementById('pdfnome').textContent=f.nome;
+  document.getElementById('pdfstatus').textContent='';
+  document.getElementById('pdfpreview').style.display='none';
+  document.getElementById('pdfcancel').style.display='flex';
+  document.getElementById('ipdf').value='';abrirM('mpdf');
+}
+
+async function processarArquivo(e){
+  const file=e.target.files[0];if(!file)return;
+  const stEl=document.getElementById('pdfstatus'),pvEl=document.getElementById('pdfpreview');
+  document.getElementById('pdfcancel').style.display='none';
+  stEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span> Lendo com IA... aguarde</div>`;
+  pvEl.style.display='none';
+
+  const isImg=file.type.startsWith('image/');
+  const base64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Erro'));r.readAsDataURL(file);});
+  const lista=S.produtos.map((p,i)=>`${i+1}. ${p.nome}${p.codigo?' ['+p.codigo+']':''}`).join('\n');
+  const prompt=`Analise este orçamento farmacêutico. Minha lista:\n${lista}\n\nExtraia os preços. Responda APENAS com JSON:\n{"itens":[{"nomePDF":"","preco":0,"prazo":null,"desconto":null,"validade":null,"idxMinha":1}]}\nvalidade no formato YYYY-MM-DD ou null. Sem texto extra.`;
+
+  try{
+    const block=isImg
+      ?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]
+      :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:block}]})});
+    const data=await resp.json();
+    const txt=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(txt);pdfDados=parsed.itens||[];
+    if(!pdfDados.length){stEl.innerHTML=`<span style="color:var(--erro)">⚠️ Nenhum produto encontrado. Verifique se o arquivo está legível.</span>`;document.getElementById('pdfcancel').style.display='flex';return;}
+    stEl.innerHTML=`<span style="color:var(--verde)">✅ ${pdfDados.length} item(s) encontrado(s)</span>`;
+    document.getElementById('pdftab').innerHTML=`<table><thead><tr><th>No doc.</th><th>Preço</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>${pdfDados.map(item=>{const m=item.idxMinha?S.produtos[item.idxMinha-1]:null;return`<tr><td style="font-size:11px">${item.nomePDF}</td><td style="font-family:'DM Mono',monospace">${moeda(item.preco)}</td><td style="text-align:center">${item.prazo||'—'}</td><td style="text-align:center">${item.desconto?item.desconto+'%':'—'}</td><td style="text-align:center">${item.validade||'—'}</td><td style="font-size:11px;color:var(--verde)">${m?'✅ '+m.nome:'❓ Não mapeado'}</td></tr>`;}).join('')}</tbody></table>`;
+    pvEl.style.display='block';
+  }catch(err){stEl.innerHTML=`<span style="color:var(--erro)">❌ Erro: ${err.message}</span>`;document.getElementById('pdfcancel').style.display='flex';}
+}
+
+function aplicarPDF(){
+  let ap=0;
+  pdfDados.forEach(item=>{if(!item.idxMinha)return;const prod=S.produtos[item.idxMinha-1];if(!prod)return;if(!S.cotacoes[prod.id])S.cotacoes[prod.id]={};S.cotacoes[prod.id][pdfFornId]={preco:item.preco||'',prazo:item.prazo||'',desconto:item.desconto||'',validade:item.validade||''};ap++;});
+  salvar();fecharM('mpdf');toast(`✅ ${ap} preço(s) aplicado(s)`);
+}
+
+const dz=document.getElementById('pdfzone');
+if(dz){dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.background='var(--verde-bg)';});dz.addEventListener('dragleave',()=>dz.style.background='');dz.addEventListener('drop',e=>{e.preventDefault();dz.style.background='';const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);document.getElementById('ipdf').files=dt.files;processarArquivo({target:{files:[f]}});}});}
+
+// PLACAR
+function calcularPlacar(){
+  const el=document.getElementById('placar');
+  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML=`<div class="empty"><div class="ei">🏆</div><div class="et">Cadastre dados primeiro.</div></div>`;return;}
+  const sc={},tot={};S.fornecedores.forEach(f=>{sc[f.id]=0;tot[f.id]=0;});let com=0;
+  S.produtos.forEach(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
+  if(!com){el.innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Preencha os preços no Comparativo.</div></div>`;return;}
+  const mx=Math.max(...Object.values(sc));
+  const sorted=[...S.fornecedores].sort((a,b)=>sc[b.id]-sc[a.id]);
+  el.innerHTML=`<p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Baseado em <strong>${com}</strong> produto(s) com preços.</p><div class="placar-grid">${sorted.map(f=>{const ic=sc[f.id]===mx&&mx>0;return`<div class="placar-card ${ic?'cx':''}">${ic?'<div style="font-size:18px">👑</div>':''}<div class="pn2">${f.nome}</div><div class="pnum">${sc[f.id]}</div><div class="plbl">item(s) mais barato(s)</div>${tot[f.id]>0?`<div style="margin-top:5px;font-size:11px;color:var(--cinza4)">Total: ${moeda(tot[f.id])}</div>`:''}</div>`;}).join('')}</div><div class="card" style="margin-top:14px;padding:14px"><div class="card-title">Resumo por Produto</div><div class="table-wrap"><table><thead><tr><th>Produto</th>${S.fornecedores.map(f=>`<th style="text-align:center">${f.nome}</th>`).join('')}<th>🏆 Vencedor</th></tr></thead><tbody>${S.produtos.map(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return`<tr><td class="pn">${p.nome}</td>${S.fornecedores.map(f=>{const v=parseFloat(c[f.id]?.preco);const im=mf===f.id;return`<td style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;${im?'color:var(--verde);font-weight:600':''}">${!isNaN(v)&&v>0?moeda(v):'—'}</td>`;}).join('')}<td style="text-align:center">${mf?`<span class="wb">${S.fornecedores.find(f=>f.id===mf)?.nome}</span>`:'—'}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+}
+
+// COMBO IDEAL
+function calcularCombo(){
+  const el=document.getElementById('combo');
+  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML=`<div class="empty"><div class="ei">💡</div><div class="et">Cadastre dados e preencha os preços.</div></div>`;return;}
+  let totalIdeal=0,totF={};S.fornecedores.forEach(f=>totF[f.id]=0);const linhas=[];
+  S.produtos.forEach(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p,mf,min});}});
+  if(!linhas.length){el.innerHTML=`<div class="empty"><div class="ei">💡</div><div class="et">Preencha os preços no Comparativo para calcular.</div></div>`;return;}
+  const melhorUnico=Math.min(...S.fornecedores.map(f=>totF[f.id]).filter(v=>v>0));
+  const eco=melhorUnico-totalIdeal;
+  el.innerHTML=`<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase;letter-spacing:.5px">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:'DM Mono',monospace">${moeda(totalIdeal)}</div></div>${eco>0?`<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase;letter-spacing:.5px">Economia vs. 1 fornecedor só</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:'DM Mono',monospace">+ ${moeda(eco)}</div></div>`:''}</div>${linhas.map(({p,mf,min})=>{const f=S.fornecedores.find(x=>x.id===mf);return`<div class="combo-row"><div class="cp1">${p.nome} <span style="color:var(--cinza3);font-size:11px">× ${p.qtd}</span></div><div><span class="wb">${f?.nome}</span></div><div class="cp3">${moeda(min)}</div><div class="cp4">subtotal ${moeda(min*(p.qtd||1))}</div></div>`;}).join('')}`;
+}
+
+// WHATSAPP
+function enviarWhatsApp(){
+  if(!S.fornecedores.length){toast('⚠️ Cadastre fornecedores primeiro');return;}
+  if(!S.produtos.length){toast('⚠️ Cadastre produtos primeiro');return;}
+  const el=document.getElementById('wpplist');
+  const comTel=S.fornecedores.filter(f=>f.contato);
+  el.innerHTML=comTel.map(f=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza2)"><div><div style="font-weight:600">${f.nome}</div><div style="font-size:12px;color:var(--cinza4)">${f.contato}</div></div><button class="btn btn-green btn-sm" onclick="abrirWpp('${f.id}')">📲 Enviar</button></div>`).join('')+(!comTel.length?`<p style="font-size:12px;color:var(--cinza4);padding:10px 0">Nenhum fornecedor com WhatsApp cadastrado.</p>`:S.fornecedores.some(f=>!f.contato)?`<p style="font-size:11px;color:var(--cinza4);margin-top:8px">⚠️ Alguns fornecedores não têm número — edite-os para adicionar.</p>`:'');
+  abrirM('mwpp');
+}
+
+function abrirWpp(fid){
+  const f=S.fornecedores.find(x=>x.id===fid);
+  const lista=S.produtos.map((p,i)=>`${i+1}. ${p.nome}${p.codigo?' ('+p.codigo+')':''} — Qtd: ${p.qtd} ${p.unidade}`).join('\n');
+  const txt=`Olá, ${f.nome}! 🙋\n\nSeguem os produtos para cotação da *MS Farma*:\n\n${lista}\n\nAguardo o orçamento. Obrigada! 💊`;
+  const num=f.contato.replace(/\D/g,'');
+  window.open(`https://wa.me/55${num}?text=${encodeURIComponent(txt)}`,'_blank');
+  fecharM('mwpp');toast('📲 Abrindo WhatsApp...');
+}
+
+// HISTÓRICO
+function salvarHistorico(){
+  if(!S.produtos.length||!S.fornecedores.length){toast('⚠️ Nada para salvar');return;}
+  const nome=prompt('Nome desta cotação:','Cotação '+new Date().toLocaleDateString('pt-BR'));
+  if(!nome)return;
+  S.historico.unshift({id:uid(),nome,data:hoje(),fornecedores:[...S.fornecedores],produtos:[...S.produtos],cotacoes:JSON.parse(JSON.stringify(S.cotacoes))});
+  if(S.historico.length>20)S.historico=S.historico.slice(0,20);
+  salvar();renderHist();toast('💾 Cotação salva!');
+}
+
+function excluirHist(id){
+  if(!confirm('Remover do histórico?'))return;
+  S.historico=S.historico.filter(x=>x.id!==id);salvar();renderHist();toast('🗑 Removido');
+}
+
+function restaurarHist(id){
+  if(!confirm('Restaurar esta cotação? Os dados atuais serão substituídos.'))return;
+  const h=S.historico.find(x=>x.id===id);if(!h)return;
+  S.fornecedores=h.fornecedores;S.produtos=h.produtos;S.cotacoes=h.cotacoes;
+  salvar();toast('✅ Cotação restaurada!');
+}
+
+function renderHist(){
+  const el=document.getElementById('hist');
+  if(!S.historico.length){el.innerHTML=`<div class="empty"><div class="ei">📂</div><div class="et">Nenhuma cotação salva.<br>Clique em "Salvar cotação atual" para guardar.</div></div>`;document.getElementById('card-graf').style.display='none';return;}
+  el.innerHTML=S.historico.map(h=>`<div class="hi"><div class="hh"><div><div class="hn">${h.nome}</div><div class="hd">${h.data} · ${h.fornecedores.length} fornecedor(es) · ${h.produtos.length} produto(s)</div></div><div style="display:flex;gap:5px"><button class="btn btn-outline btn-xs" onclick="restaurarHist('${h.id}')">↩ Restaurar</button><button class="btn btn-danger btn-xs" onclick="excluirHist('${h.id}')">🗑</button></div></div></div>`).join('');
+  document.getElementById('card-graf').style.display='block';
+  const sel=document.getElementById('sel-prod');
+  const todos=[...new Map(S.historico.flatMap(h=>h.produtos).map(p=>[p.nome,p])).values()];
+  sel.innerHTML=todos.map(p=>`<option value="${p.nome}">${p.nome}</option>`).join('');
+  renderGrafico();
+}
+
+function renderGrafico(){
+  const nome=document.getElementById('sel-prod').value;
+  const ctx=document.getElementById('cgraf');
+  if(chartIns){chartIns.destroy();chartIns=null;}
+  if(!nome||!S.historico.length)return;
+  const cores=['#1A6B4A','#2563EB','#D97706','#7C3AED','#DC2626','#059669'];
+  const fmap=new Map();S.historico.forEach(h=>h.fornecedores.forEach(f=>fmap.set(f.id,f.nome)));
+  const fids=[...fmap.keys()];
+  const labels=S.historico.map(h=>h.nome).reverse();
+  const datasets=fids.map((fid,i)=>({label:fmap.get(fid),data:S.historico.map(h=>{const p=h.produtos.find(x=>x.nome===nome);if(!p)return null;const v=parseFloat(h.cotacoes[p.id]?.[fid]?.preco);return isNaN(v)?null:v;}).reverse(),borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,pointRadius:4,fill:false}));
+  chartIns=new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11}}}},scales:{y:{ticks:{callback:v=>moeda(v),font:{family:'DM Mono',size:10}},grid:{color:'#E8ECEB'}},x:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false}}}}});
+}
+
+// EXPORTAR
+function exportarExcel(){
+  if(!S.produtos.length||!S.fornecedores.length){toast('⚠️ Nada para exportar');return;}
+  let csv='Produto;Qtd;Un;'+S.fornecedores.map(f=>`${f.nome} - Preço;${f.nome} - Prazo;${f.nome} - Desc%;${f.nome} - Validade`).join(';')+';Vencedor\n';
+  S.produtos.forEach(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});csv+=`"${p.nome}";${p.qtd};${p.unidade};`+S.fornecedores.map(f=>{const ct=c[f.id]||{};return`${ct.preco||''};${ct.prazo||''};${ct.desconto||''};${ct.validade||''}`;}).join(';')+`;${mf?S.fornecedores.find(f=>f.id===mf)?.nome:''}\n`;});
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`cotacao_msfarma_${hoje()}.csv`;a.click();toast('📥 Exportado!');
+}
+
+['mforn','mprod','mpdf','mwpp'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)fecharM(id);});});
 </script>
 </body>
 </html>
