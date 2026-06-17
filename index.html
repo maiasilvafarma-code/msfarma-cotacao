@@ -15,7 +15,11 @@ header{background:var(--verde);color:var(--branco);padding:0 20px;height:56px;di
 .logo-icon{width:30px;height:30px;background:var(--amarelo);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;}
 .logo-text{font-size:14px;font-weight:600;}
 .logo-sub{font-size:10px;font-weight:300;opacity:.75;}
-.header-actions{display:flex;gap:6px;}
+.header-actions{display:flex;gap:6px;align-items:center;}
+.sync-status{font-size:11px;opacity:.8;display:flex;align-items:center;gap:4px;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;}
+.sync-dot.sync{animation:pulse 1s infinite;}
+.sync-dot.err{background:#f87171;}
 .tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;}
 .tabs::-webkit-scrollbar{display:none;}
 .tab{padding:13px 12px 11px;font-size:12px;font-weight:500;color:var(--cinza4);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
@@ -90,7 +94,6 @@ td.vd input{width:105px;font-size:12px;}
 .combo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cinza2);flex-wrap:wrap;}
 .combo-row:last-child{border-bottom:none;}
 .cp1{font-weight:500;font-size:13px;flex:1;min-width:110px;}
-.cp2{font-size:12px;color:var(--verde);font-weight:600;}
 .cp3{font-family:'DM Mono',monospace;font-size:13px;}
 .cp4{font-size:11px;color:var(--cinza4);}
 .hi{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;margin-bottom:8px;}
@@ -98,10 +101,19 @@ td.vd input{width:105px;font-size:12px;}
 .hd{font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace;}
 .hn{font-weight:600;font-size:13px;}
 .gw{position:relative;height:250px;}
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--cinza2);border-top-color:var(--verde);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cloud-badge{display:inline-flex;align-items:center;gap:4px;background:#EFF6FF;color:#2563EB;border-radius:20px;padding:3px 9px;font-size:11px;font-weight:500;}
 @media(max-width:600px){main{padding:12px 10px 50px;}header{padding:0 12px;}.card{padding:14px;}.logo-sub{display:none;}}
 </style>
 </head>
 <body>
+
+<div id="loading" class="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div style="font-size:13px;color:var(--cinza4)">Carregando dados da nuvem...</div>
+</div>
 
 <header>
   <div class="logo">
@@ -112,7 +124,8 @@ td.vd input{width:105px;font-size:12px;}
     </div>
   </div>
   <div class="header-actions">
-    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲 WhatsApp</button>
+    <div class="sync-status"><div class="sync-dot" id="sdot"></div><span id="stxt">nuvem</span></div>
+    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲</button>
     <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Excel</button>
   </div>
 </header>
@@ -127,7 +140,6 @@ td.vd input{width:105px;font-size:12px;}
 </div>
 
 <main>
-
 <div id="panel-fornecedores" class="panel active">
   <div class="card">
     <div class="sr"><div class="st">Fornecedores</div><button class="btn btn-primary btn-sm" onclick="abrirMF()">+ Adicionar</button></div>
@@ -167,7 +179,7 @@ td.vd input{width:105px;font-size:12px;}
 
 <div id="panel-combo" class="panel">
   <div class="card">
-    <div class="sr"><div class="st">💡 Combinação Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
+    <div class="sr"><div class="st">Combinacao Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
     <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">Qual fornecedor comprar cada produto para ter a maior economia total.</p>
     <div id="combo"></div>
   </div>
@@ -175,32 +187,31 @@ td.vd input{width:105px;font-size:12px;}
 
 <div id="panel-graficos" class="panel">
   <div class="card">
-    <div class="sr"><div class="st">📈 Histórico de Cotações</div>
-      <button class="btn btn-primary btn-sm" onclick="salvarHistorico()">💾 Salvar cotação atual</button>
+    <div class="sr"><div class="st">Historico de Cotacoes</div>
+      <button class="btn btn-primary btn-sm" onclick="salvarHistorico()">Salvar cotacao atual</button>
     </div>
     <div id="hist"></div>
   </div>
   <div class="card" id="card-graf" style="display:none">
     <div class="sr">
-      <div class="st">Evolução de Preços</div>
+      <div class="st">Evolucao de Precos</div>
       <select id="sel-prod" onchange="renderGrafico()" style="font-size:12px;padding:5px 9px;border-radius:7px;border:1.5px solid var(--cinza2)"></select>
     </div>
     <div class="gw"><canvas id="cgraf"></canvas></div>
   </div>
 </div>
-
 </main>
 
 <!-- MODAL FORNECEDOR -->
 <div id="mforn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
   <div class="card" style="width:min(420px,94vw);margin:0">
-    <div class="card-title">📋 Fornecedor</div>
+    <div class="card-title">Fornecedor</div>
     <input type="hidden" id="fid">
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
       <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="fnome" placeholder="ex: Distribuidora Alfa"></div>
       <div class="form-group"><label>WhatsApp</label><input id="ftel" placeholder="(85) 99999-9999"></div>
-      <div class="form-group"><label>Prazo padrão (dias)</label><input id="fprazo" type="number" placeholder="30"></div>
-      <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
+      <div class="form-group"><label>Prazo padrao (dias)</label><input id="fprazo" type="number" placeholder="30"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Observacao</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn btn-outline" onclick="fecharM('mforn')">Cancelar</button>
@@ -212,11 +223,11 @@ td.vd input{width:105px;font-size:12px;}
 <!-- MODAL PRODUTO -->
 <div id="mprod" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
   <div class="card" style="width:min(420px,94vw);margin:0">
-    <div class="card-title">📦 Produto</div>
+    <div class="card-title">Produto</div>
     <input type="hidden" id="pid">
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
       <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="pnome" placeholder="ex: Dipirona 500mg 20cp"></div>
-      <div class="form-group"><label>Código / EAN</label><input id="pcodigo" placeholder="opcional"></div>
+      <div class="form-group"><label>Codigo / EAN</label><input id="pcodigo" placeholder="opcional"></div>
       <div class="form-group"><label>Unidade</label>
         <select id="punid"><option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option></select>
       </div>
@@ -232,11 +243,11 @@ td.vd input{width:105px;font-size:12px;}
 <!-- MODAL PDF/IMG -->
 <div id="mpdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
   <div class="card" style="width:min(510px,96vw);margin:0;max-height:92vh;overflow-y:auto">
-    <div class="card-title">🤖 Leitura por IA · <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+    <div class="card-title">Leitura por IA - <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div class="pdf-zone" onclick="document.getElementById('ipdf').click()" id="pdfzone">
       <div class="pi">📄</div>
-      <div>Clique para selecionar o orçamento</div>
-      <div class="ph">PDF, PNG ou JPG — a IA lê automaticamente 🤖</div>
+      <div>Clique para selecionar o orcamento</div>
+      <div class="ph">PDF, PNG ou JPG - a IA le automaticamente</div>
     </div>
     <input type="file" id="ipdf" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="processarArquivo(event)">
     <div id="pdfstatus" style="margin-top:10px;font-size:13px;color:var(--cinza4)"></div>
@@ -245,7 +256,7 @@ td.vd input{width:105px;font-size:12px;}
       <div id="pdftab" class="table-wrap"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn btn-outline" onclick="fecharM('mpdf')">Cancelar</button>
-        <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar preços</button>
+        <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar precos</button>
       </div>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-top:10px" id="pdfcancel">
@@ -257,533 +268,7 @@ td.vd input{width:105px;font-size:12px;}
 <!-- MODAL WHATSAPP -->
 <div id="mwpp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
   <div class="card" style="width:min(460px,96vw);margin:0;max-height:90vh;overflow-y:auto">
-    <div class="card-title">📲 Enviar lista por WhatsApp</div>
-    <p style="font-size:13px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor:</p>
-    <div id="wpplist"></div>
-    <div style="display:flex;justify-content:flex-end;margin-top:12px">
-      <button class="btn btn-outline" onclick="fecharM('mwpp')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-</script>
-<style>
-:root{--verde:#1A6B4A;--verde2:#22885F;--verde-bg:#EAF4EF;--amarelo:#F5C842;--cinza1:#F7F8F7;--cinza2:#E8ECEB;--cinza3:#B0BAB7;--cinza4:#6B7876;--preto:#1A1E1D;--branco:#FFFFFF;--erro:#D94F3D;--alerta:#F59E0B;--sombra:0 2px 12px rgba(26,107,74,.10);}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--cinza1);color:var(--preto);min-height:100vh;font-size:15px;}
-header{background:var(--verde);color:var(--branco);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18);}
-.logo{display:flex;align-items:center;gap:10px;}
-.logo-icon{width:30px;height:30px;background:var(--amarelo);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;}
-.logo-text{font-size:14px;font-weight:600;}
-.logo-sub{font-size:10px;font-weight:300;opacity:.75;}
-.header-actions{display:flex;gap:6px;}
-.tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;}
-.tabs::-webkit-scrollbar{display:none;}
-.tab{padding:13px 12px 11px;font-size:12px;font-weight:500;color:var(--cinza4);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
-.tab:hover{color:var(--verde);}
-.tab.active{color:var(--verde);border-bottom-color:var(--verde);}
-main{max-width:1100px;margin:0 auto;padding:20px 14px 60px;}
-.card{background:var(--branco);border-radius:12px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px;}
-.card-title{font-size:12px;font-weight:600;color:var(--verde);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
-.form-group{display:flex;flex-direction:column;gap:4px;}
-label{font-size:11px;font-weight:500;color:var(--cinza4);}
-input,select,textarea{border:1.5px solid var(--cinza2);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;color:var(--preto);background:var(--branco);transition:border-color .15s;width:100%;}
-input:focus,select:focus{outline:none;border-color:var(--verde);}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .18s;}
-.btn-primary{background:var(--verde);color:var(--branco);}
-.btn-primary:hover{background:var(--verde2);}
-.btn-outline{background:transparent;border:1.5px solid var(--cinza2);color:var(--cinza4);}
-.btn-outline:hover{border-color:var(--verde);color:var(--verde);}
-.btn-yellow{background:var(--amarelo);color:var(--preto);}
-.btn-yellow:hover{background:#e8ba2a;}
-.btn-green{background:#25D366;color:var(--branco);}
-.btn-green:hover{background:#1ebe5a;}
-.btn-danger{background:var(--erro);color:var(--branco);}
-.btn-danger:hover{background:#c0392b;}
-.btn-sm{padding:6px 11px;font-size:12px;}
-.btn-xs{padding:4px 8px;font-size:11px;}
-.forn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px;}
-.forn-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:5px;}
-.forn-card .fn{font-weight:600;font-size:13px;}
-.forn-card .fd{font-size:11px;color:var(--cinza4);}
-.forn-card .fa{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
-.chip{display:inline-block;background:var(--verde-bg);color:var(--verde);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500;}
-.table-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-thead th{background:var(--cinza1);color:var(--cinza4);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 9px;text-align:left;white-space:nowrap;}
-thead th.fh{background:var(--verde-bg);color:var(--verde);text-align:center;}
-tbody tr{border-bottom:1px solid var(--cinza2);}
-tbody tr:hover{background:var(--cinza1);}
-td{padding:8px 9px;vertical-align:middle;}
-td.pn{font-weight:500;max-width:160px;}
-td.pc{text-align:center;}
-td.pc input{width:82px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;padding:4px 6px;}
-.mp{background:#DCFCE7!important;}
-.mp input{color:var(--verde);font-weight:600;}
-.wb{display:inline-block;background:var(--verde);color:var(--branco);border-radius:4px;padding:2px 6px;font-size:10px;font-family:'DM Mono',monospace;}
-td.pz input{width:56px;text-align:center;}
-td.dc input{width:56px;text-align:right;}
-td.vd input{width:105px;font-size:12px;}
-.placar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:8px;}
-.placar-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:14px;text-align:center;}
-.placar-card.cx{border-color:var(--amarelo);background:#FFFBEA;}
-.pn2{font-size:13px;font-weight:600;margin-bottom:4px;}
-.pnum{font-size:28px;font-weight:600;color:var(--verde);font-family:'DM Mono',monospace;}
-.plbl{font-size:11px;color:var(--cinza4);margin-top:2px;}
-.pdf-zone{border:2px dashed var(--cinza2);border-radius:10px;padding:22px;text-align:center;color:var(--cinza4);font-size:13px;cursor:pointer;transition:all .18s;}
-.pdf-zone:hover{border-color:var(--verde);color:var(--verde);background:var(--verde-bg);}
-.pi{font-size:28px;margin-bottom:6px;}
-.ph{font-size:11px;margin-top:5px;opacity:.7;}
-.empty{text-align:center;padding:32px 16px;color:var(--cinza3);}
-.ei{font-size:32px;margin-bottom:10px;}
-.et{font-size:13px;}
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--preto);color:var(--branco);padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;white-space:nowrap;}
-#toast.show{opacity:1;}
-.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#1A6B4A,#22885F);color:var(--branco);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
-.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--amarelo);animation:pulse 1.5s infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.sr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
-.st{font-size:16px;font-weight:600;}
-.panel{display:none;}
-.panel.active{display:block;}
-.av-box{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400E;margin-bottom:12px;}
-.combo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cinza2);flex-wrap:wrap;}
-.combo-row:last-child{border-bottom:none;}
-.cp1{font-weight:500;font-size:13px;flex:1;min-width:110px;}
-.cp2{font-size:12px;color:var(--verde);font-weight:600;}
-.cp3{font-family:'DM Mono',monospace;font-size:13px;}
-.cp4{font-size:11px;color:var(--cinza4);}
-.hi{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;margin-bottom:8px;}
-.hh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:5px;}
-.hd{font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace;}
-.hn{font-weight:600;font-size:13px;}
-.gw{position:relative;height:250px;}
-@media(max-width:600px){main{padding:12px 10px 50px;}header{padding:0 12px;}.card{padding:14px;}.logo-sub{display:none;}}
-</style>
-</head>
-<body>
-
-<header>
-  <div class="logo">
-    <div class="logo-icon">💊</div>
-    <div>
-      <div class="logo-text">MS Farma</div>
-      <div class="logo-sub">Cotação de Fornecedores</div>
-    </div>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲 WhatsApp</button>
-    <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Excel</button>
-  </div>
-</header>
-
-<div class="tabs">
-  <div class="tab active" onclick="abrirTab('fornecedores',this)">👥 Fornecedores</div>
-  <div class="tab" onclick="abrirTab('produtos',this)">📦 Produtos</div>
-  <div class="tab" onclick="abrirTab('cotacao',this)">📊 Comparativo</div>
-  <div class="tab" onclick="abrirTab('placar',this)">🏆 Placar</div>
-  <div class="tab" onclick="abrirTab('combo',this)">💡 Combo Ideal</div>
-  <div class="tab" onclick="abrirTab('graficos',this)">📈 Histórico</div>
-</div>
-
-<main>
-
-<div id="panel-fornecedores" class="panel active">
-  <div class="card">
-    <div class="sr"><div class="st">Fornecedores</div><button class="btn btn-primary btn-sm" onclick="abrirMF()">+ Adicionar</button></div>
-    <div id="lista-forn"></div>
-  </div>
-</div>
-
-<div id="panel-produtos" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">Lista de Produtos</div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="abrirMP()">+ Produto</button>
-        <button class="btn btn-primary btn-sm" onclick="document.getElementById('icsv').click()">⬆ Importar</button>
-        <input type="file" id="icsv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
-      </div>
-    </div>
-    <div id="lista-prod"></div>
-  </div>
-</div>
-
-<div id="panel-cotacao" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">Comparativo de Preços</div><span class="ai-badge"><span class="ai-dot"></span> IA ativa</span></div>
-    <div id="av"></div>
-    <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Suba o PDF, PNG ou JPG do orçamento — a IA extrai os preços automaticamente.</p>
-    <div id="upload-forn" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
-    <div class="table-wrap"><div id="tab-cot"></div></div>
-  </div>
-</div>
-
-<div id="panel-placar" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">Placar Final</div><button class="btn btn-outline btn-sm" onclick="calcularPlacar()">↻ Atualizar</button></div>
-    <div id="placar"></div>
-  </div>
-</div>
-
-<div id="panel-combo" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">💡 Combinação Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
-    <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">Qual fornecedor comprar cada produto para ter a maior economia total.</p>
-    <div id="combo"></div>
-  </div>
-</div>
-
-<div id="panel-graficos" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">📈 Histórico de Cotações</div>
-      <button class="btn btn-primary btn-sm" onclick="salvarHistorico()">💾 Salvar cotação atual</button>
-    </div>
-    <div id="hist"></div>
-  </div>
-  <div class="card" id="card-graf" style="display:none">
-    <div class="sr">
-      <div class="st">Evolução de Preços</div>
-      <select id="sel-prod" onchange="renderGrafico()" style="font-size:12px;padding:5px 9px;border-radius:7px;border:1.5px solid var(--cinza2)"></select>
-    </div>
-    <div class="gw"><canvas id="cgraf"></canvas></div>
-  </div>
-</div>
-
-</main>
-
-<!-- MODAL FORNECEDOR -->
-<div id="mforn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(420px,94vw);margin:0">
-    <div class="card-title">📋 Fornecedor</div>
-    <input type="hidden" id="fid">
-    <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="fnome" placeholder="ex: Distribuidora Alfa"></div>
-      <div class="form-group"><label>WhatsApp</label><input id="ftel" placeholder="(85) 99999-9999"></div>
-      <div class="form-group"><label>Prazo padrão (dias)</label><input id="fprazo" type="number" placeholder="30"></div>
-      <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <button class="btn btn-outline" onclick="fecharM('mforn')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarF()">Salvar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL PRODUTO -->
-<div id="mprod" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(420px,94vw);margin:0">
-    <div class="card-title">📦 Produto</div>
-    <input type="hidden" id="pid">
-    <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="pnome" placeholder="ex: Dipirona 500mg 20cp"></div>
-      <div class="form-group"><label>Código / EAN</label><input id="pcodigo" placeholder="opcional"></div>
-      <div class="form-group"><label>Unidade</label>
-        <select id="punid"><option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option></select>
-      </div>
-      <div class="form-group"><label>Qtd. solicitada</label><input id="pqtd" type="number" placeholder="1" min="1"></div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <button class="btn btn-outline" onclick="fecharM('mprod')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarP()">Salvar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL PDF/IMG -->
-<div id="mpdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(510px,96vw);margin:0;max-height:92vh;overflow-y:auto">
-    <div class="card-title">🤖 Leitura por IA · <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
-    <div class="pdf-zone" onclick="document.getElementById('ipdf').click()" id="pdfzone">
-      <div class="pi">📄</div>
-      <div>Clique para selecionar o orçamento</div>
-      <div class="ph">PDF, PNG ou JPG — a IA lê automaticamente 🤖</div>
-    </div>
-    <input type="file" id="ipdf" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="processarArquivo(event)">
-    <div id="pdfstatus" style="margin-top:10px;font-size:13px;color:var(--cinza4)"></div>
-    <div id="pdfpreview" style="display:none;margin-top:10px">
-      <div class="card-title" style="margin-bottom:8px">Dados encontrados</div>
-      <div id="pdftab" class="table-wrap"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <button class="btn btn-outline" onclick="fecharM('mpdf')">Cancelar</button>
-        <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar preços</button>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px" id="pdfcancel">
-      <button class="btn btn-outline" onclick="fecharM('mpdf')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL WHATSAPP -->
-<div id="mwpp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(460px,96vw);margin:0;max-height:90vh;overflow-y:auto">
-    <div class="card-title">📲 Enviar lista por WhatsApp</div>
-    <p style="font-size:13px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor:</p>
-    <div id="wpplist"></div>
-    <div style="display:flex;justify-content:flex-end;margin-top:12px">
-      <button class="btn btn-outline" onclick="fecharM('mwpp')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-</script>
-<style>
-:root{--verde:#1A6B4A;--verde2:#22885F;--verde-bg:#EAF4EF;--amarelo:#F5C842;--cinza1:#F7F8F7;--cinza2:#E8ECEB;--cinza3:#B0BAB7;--cinza4:#6B7876;--preto:#1A1E1D;--branco:#FFFFFF;--erro:#D94F3D;--alerta:#F59E0B;--sombra:0 2px 12px rgba(26,107,74,.10);}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--cinza1);color:var(--preto);min-height:100vh;font-size:15px;}
-header{background:var(--verde);color:var(--branco);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18);}
-.logo{display:flex;align-items:center;gap:10px;}
-.logo-icon{width:30px;height:30px;background:var(--amarelo);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;}
-.logo-text{font-size:14px;font-weight:600;}
-.logo-sub{font-size:10px;font-weight:300;opacity:.75;}
-.header-actions{display:flex;gap:6px;}
-.tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;}
-.tabs::-webkit-scrollbar{display:none;}
-.tab{padding:13px 12px 11px;font-size:12px;font-weight:500;color:var(--cinza4);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
-.tab:hover{color:var(--verde);}
-.tab.active{color:var(--verde);border-bottom-color:var(--verde);}
-main{max-width:1100px;margin:0 auto;padding:20px 14px 60px;}
-.card{background:var(--branco);border-radius:12px;box-shadow:var(--sombra);padding:20px;margin-bottom:14px;}
-.card-title{font-size:12px;font-weight:600;color:var(--verde);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
-.form-group{display:flex;flex-direction:column;gap:4px;}
-label{font-size:11px;font-weight:500;color:var(--cinza4);}
-input,select,textarea{border:1.5px solid var(--cinza2);border-radius:7px;padding:8px 10px;font-family:inherit;font-size:13px;color:var(--preto);background:var(--branco);transition:border-color .15s;width:100%;}
-input:focus,select:focus{outline:none;border-color:var(--verde);}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .18s;}
-.btn-primary{background:var(--verde);color:var(--branco);}
-.btn-primary:hover{background:var(--verde2);}
-.btn-outline{background:transparent;border:1.5px solid var(--cinza2);color:var(--cinza4);}
-.btn-outline:hover{border-color:var(--verde);color:var(--verde);}
-.btn-yellow{background:var(--amarelo);color:var(--preto);}
-.btn-yellow:hover{background:#e8ba2a;}
-.btn-green{background:#25D366;color:var(--branco);}
-.btn-green:hover{background:#1ebe5a;}
-.btn-danger{background:var(--erro);color:var(--branco);}
-.btn-danger:hover{background:#c0392b;}
-.btn-sm{padding:6px 11px;font-size:12px;}
-.btn-xs{padding:4px 8px;font-size:11px;}
-.forn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px;}
-.forn-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:5px;}
-.forn-card .fn{font-weight:600;font-size:13px;}
-.forn-card .fd{font-size:11px;color:var(--cinza4);}
-.forn-card .fa{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
-.chip{display:inline-block;background:var(--verde-bg);color:var(--verde);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:500;}
-.table-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-thead th{background:var(--cinza1);color:var(--cinza4);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 9px;text-align:left;white-space:nowrap;}
-thead th.fh{background:var(--verde-bg);color:var(--verde);text-align:center;}
-tbody tr{border-bottom:1px solid var(--cinza2);}
-tbody tr:hover{background:var(--cinza1);}
-td{padding:8px 9px;vertical-align:middle;}
-td.pn{font-weight:500;max-width:160px;}
-td.pc{text-align:center;}
-td.pc input{width:82px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;padding:4px 6px;}
-.mp{background:#DCFCE7!important;}
-.mp input{color:var(--verde);font-weight:600;}
-.wb{display:inline-block;background:var(--verde);color:var(--branco);border-radius:4px;padding:2px 6px;font-size:10px;font-family:'DM Mono',monospace;}
-td.pz input{width:56px;text-align:center;}
-td.dc input{width:56px;text-align:right;}
-td.vd input{width:105px;font-size:12px;}
-.placar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:8px;}
-.placar-card{border:1.5px solid var(--cinza2);border-radius:10px;padding:14px;text-align:center;}
-.placar-card.cx{border-color:var(--amarelo);background:#FFFBEA;}
-.pn2{font-size:13px;font-weight:600;margin-bottom:4px;}
-.pnum{font-size:28px;font-weight:600;color:var(--verde);font-family:'DM Mono',monospace;}
-.plbl{font-size:11px;color:var(--cinza4);margin-top:2px;}
-.pdf-zone{border:2px dashed var(--cinza2);border-radius:10px;padding:22px;text-align:center;color:var(--cinza4);font-size:13px;cursor:pointer;transition:all .18s;}
-.pdf-zone:hover{border-color:var(--verde);color:var(--verde);background:var(--verde-bg);}
-.pi{font-size:28px;margin-bottom:6px;}
-.ph{font-size:11px;margin-top:5px;opacity:.7;}
-.empty{text-align:center;padding:32px 16px;color:var(--cinza3);}
-.ei{font-size:32px;margin-bottom:10px;}
-.et{font-size:13px;}
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--preto);color:var(--branco);padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;white-space:nowrap;}
-#toast.show{opacity:1;}
-.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#1A6B4A,#22885F);color:var(--branco);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
-.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--amarelo);animation:pulse 1.5s infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.sr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
-.st{font-size:16px;font-weight:600;}
-.panel{display:none;}
-.panel.active{display:block;}
-.av-box{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400E;margin-bottom:12px;}
-.combo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cinza2);flex-wrap:wrap;}
-.combo-row:last-child{border-bottom:none;}
-.cp1{font-weight:500;font-size:13px;flex:1;min-width:110px;}
-.cp2{font-size:12px;color:var(--verde);font-weight:600;}
-.cp3{font-family:'DM Mono',monospace;font-size:13px;}
-.cp4{font-size:11px;color:var(--cinza4);}
-.hi{border:1.5px solid var(--cinza2);border-radius:10px;padding:13px;margin-bottom:8px;}
-.hh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:5px;}
-.hd{font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace;}
-.hn{font-weight:600;font-size:13px;}
-.gw{position:relative;height:250px;}
-@media(max-width:600px){main{padding:12px 10px 50px;}header{padding:0 12px;}.card{padding:14px;}.logo-sub{display:none;}}
-</style>
-</head>
-<body>
-
-<header>
-  <div class="logo">
-    <div class="logo-icon">💊</div>
-    <div>
-      <div class="logo-text">MS Farma</div>
-      <div class="logo-sub">Cotação de Fornecedores</div>
-    </div>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲 WhatsApp</button>
-    <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Excel</button>
-  </div>
-</header>
-
-<div class="tabs">
-  <div class="tab active" onclick="abrirTab('fornecedores',this)">👥 Fornecedores</div>
-  <div class="tab" onclick="abrirTab('produtos',this)">📦 Produtos</div>
-  <div class="tab" onclick="abrirTab('cotacao',this)">📊 Comparativo</div>
-  <div class="tab" onclick="abrirTab('placar',this)">🏆 Placar</div>
-  <div class="tab" onclick="abrirTab('combo',this)">💡 Combo Ideal</div>
-  <div class="tab" onclick="abrirTab('graficos',this)">📈 Histórico</div>
-</div>
-
-<main>
-
-<div id="panel-fornecedores" class="panel active">
-  <div class="card">
-    <div class="sr"><div class="st">Fornecedores</div><button class="btn btn-primary btn-sm" onclick="abrirMF()">+ Adicionar</button></div>
-    <div id="lista-forn"></div>
-  </div>
-</div>
-
-<div id="panel-produtos" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">Lista de Produtos</div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="abrirMP()">+ Produto</button>
-        <button class="btn btn-primary btn-sm" onclick="document.getElementById('icsv').click()">⬆ Importar</button>
-        <input type="file" id="icsv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
-      </div>
-    </div>
-    <div id="lista-prod"></div>
-  </div>
-</div>
-
-<div id="panel-cotacao" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">Comparativo de Preços</div><span class="ai-badge"><span class="ai-dot"></span> IA ativa</span></div>
-    <div id="av"></div>
-    <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Suba o PDF, PNG ou JPG do orçamento — a IA extrai os preços automaticamente.</p>
-    <div id="upload-forn" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
-    <div class="table-wrap"><div id="tab-cot"></div></div>
-  </div>
-</div>
-
-<div id="panel-placar" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">Placar Final</div><button class="btn btn-outline btn-sm" onclick="calcularPlacar()">↻ Atualizar</button></div>
-    <div id="placar"></div>
-  </div>
-</div>
-
-<div id="panel-combo" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">💡 Combinação Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
-    <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">Qual fornecedor comprar cada produto para ter a maior economia total.</p>
-    <div id="combo"></div>
-  </div>
-</div>
-
-<div id="panel-graficos" class="panel">
-  <div class="card">
-    <div class="sr"><div class="st">📈 Histórico de Cotações</div>
-      <button class="btn btn-primary btn-sm" onclick="salvarHistorico()">💾 Salvar cotação atual</button>
-    </div>
-    <div id="hist"></div>
-  </div>
-  <div class="card" id="card-graf" style="display:none">
-    <div class="sr">
-      <div class="st">Evolução de Preços</div>
-      <select id="sel-prod" onchange="renderGrafico()" style="font-size:12px;padding:5px 9px;border-radius:7px;border:1.5px solid var(--cinza2)"></select>
-    </div>
-    <div class="gw"><canvas id="cgraf"></canvas></div>
-  </div>
-</div>
-
-</main>
-
-<!-- MODAL FORNECEDOR -->
-<div id="mforn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(420px,94vw);margin:0">
-    <div class="card-title">📋 Fornecedor</div>
-    <input type="hidden" id="fid">
-    <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="fnome" placeholder="ex: Distribuidora Alfa"></div>
-      <div class="form-group"><label>WhatsApp</label><input id="ftel" placeholder="(85) 99999-9999"></div>
-      <div class="form-group"><label>Prazo padrão (dias)</label><input id="fprazo" type="number" placeholder="30"></div>
-      <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <button class="btn btn-outline" onclick="fecharM('mforn')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarF()">Salvar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL PRODUTO -->
-<div id="mprod" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(420px,94vw);margin:0">
-    <div class="card-title">📦 Produto</div>
-    <input type="hidden" id="pid">
-    <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="pnome" placeholder="ex: Dipirona 500mg 20cp"></div>
-      <div class="form-group"><label>Código / EAN</label><input id="pcodigo" placeholder="opcional"></div>
-      <div class="form-group"><label>Unidade</label>
-        <select id="punid"><option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option></select>
-      </div>
-      <div class="form-group"><label>Qtd. solicitada</label><input id="pqtd" type="number" placeholder="1" min="1"></div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <button class="btn btn-outline" onclick="fecharM('mprod')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarP()">Salvar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL PDF/IMG -->
-<div id="mpdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(510px,96vw);margin:0;max-height:92vh;overflow-y:auto">
-    <div class="card-title">🤖 Leitura por IA · <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
-    <div class="pdf-zone" onclick="document.getElementById('ipdf').click()" id="pdfzone">
-      <div class="pi">📄</div>
-      <div>Clique para selecionar o orçamento</div>
-      <div class="ph">PDF, PNG ou JPG — a IA lê automaticamente 🤖</div>
-    </div>
-    <input type="file" id="ipdf" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="processarArquivo(event)">
-    <div id="pdfstatus" style="margin-top:10px;font-size:13px;color:var(--cinza4)"></div>
-    <div id="pdfpreview" style="display:none;margin-top:10px">
-      <div class="card-title" style="margin-bottom:8px">Dados encontrados</div>
-      <div id="pdftab" class="table-wrap"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <button class="btn btn-outline" onclick="fecharM('mpdf')">Cancelar</button>
-        <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar preços</button>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px" id="pdfcancel">
-      <button class="btn btn-outline" onclick="fecharM('mpdf')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL WHATSAPP -->
-<div id="mwpp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(460px,96vw);margin:0;max-height:90vh;overflow-y:auto">
-    <div class="card-title">📲 Enviar lista por WhatsApp</div>
+    <div class="card-title">Enviar lista por WhatsApp</div>
     <p style="font-size:13px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor:</p>
     <div id="wpplist"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:12px">
@@ -795,13 +280,110 @@ td.vd input{width:105px;font-size:12px;}
 <div id="toast"></div>
 
 <script>
-let S={fornecedores:[],produtos:[],cotacoes:{},historico:[]};
-let pdfDados=[],pdfFornId=null,chartIns=null;
+// ══ SUPABASE CONFIG ══
+const SB_URL = 'https://aydzadpymxkcygquixgv.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5ZHphZHB5bXhrY3lncXVpeGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDQxMzQsImV4cCI6MjA5NjA4MDEzNH0.LiBxr2Eu6QAPXSLJ93sDLxsaKZIKR_4XFVtbSMhkX0s';
+const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 
-function salvar(){localStorage.setItem('msfarma_cot_v3',JSON.stringify(S));}
-function carregar(){const d=localStorage.getItem('msfarma_cot_v3');if(d)S=JSON.parse(d);if(!S.historico)S.historico=[];}
-carregar();
+async function sbGet(table, params) {
+  const q = params ? '?'+params : '';
+  const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:SB_H});
+  return r.json();
+}
+async function sbUpsert(table, data) {
+  const r = await fetch(SB_URL+'/rest/v1/'+table, {
+    method:'POST', headers:{...SB_H,'Prefer':'resolution=merge-duplicates,return=representation'},
+    body:JSON.stringify(data)
+  });
+  return r.json();
+}
+async function sbDelete(table, id) {
+  await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id, {method:'DELETE', headers:SB_H});
+}
 
+// ══ STATE ══
+let S = {fornecedores:[], produtos:[], cotacoes:{}, historico:[]};
+let pdfDados=[], pdfFornId=null, chartIns=null;
+
+// ══ SYNC STATUS ══
+function setSyncStatus(status) {
+  const dot = document.getElementById('sdot');
+  const txt = document.getElementById('stxt');
+  if(status==='ok'){dot.className='sync-dot';txt.textContent='nuvem';}
+  else if(status==='sync'){dot.className='sync-dot sync';txt.textContent='salvando...';}
+  else{dot.className='sync-dot err';txt.textContent='erro';}
+}
+
+// ══ LOAD FROM SUPABASE ══
+async function carregarDados() {
+  try {
+    const [forns, prods, precos, hist] = await Promise.all([
+      sbGet('cotacao_fornecedores','order=created_at.asc'),
+      sbGet('cotacao_produtos','order=created_at.asc'),
+      sbGet('cotacao_precos','order=updated_at.asc'),
+      sbGet('cotacao_historico','order=created_at.desc')
+    ]);
+    S.fornecedores = Array.isArray(forns) ? forns : [];
+    S.produtos = Array.isArray(prods) ? prods : [];
+    S.historico = Array.isArray(hist) ? hist.map(h=>({...h,...h.snapshot})) : [];
+    // Build cotacoes object
+    S.cotacoes = {};
+    if(Array.isArray(precos)) {
+      precos.forEach(p=>{
+        if(!S.cotacoes[p.produto_id]) S.cotacoes[p.produto_id]={};
+        S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};
+      });
+    }
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('err');
+    toast('Erro ao carregar dados da nuvem');
+  }
+  document.getElementById('loading').style.display='none';
+  renderForn(); renderProd();
+}
+
+// ══ SAVE HELPERS ══
+async function saveF(obj) {
+  setSyncStatus('sync');
+  try { await sbUpsert('cotacao_fornecedores',{id:obj.id,nome:obj.nome,contato:obj.contato||null,prazo:obj.prazo||null,obs:obj.obs||null}); setSyncStatus('ok'); }
+  catch(e){setSyncStatus('err');}
+}
+async function saveP(obj) {
+  setSyncStatus('sync');
+  try { await sbUpsert('cotacao_produtos',{id:obj.id,nome:obj.nome,codigo:obj.codigo||null,unidade:obj.unidade,qtd:obj.qtd}); setSyncStatus('ok'); }
+  catch(e){setSyncStatus('err');}
+}
+async function savePreco(prodId,fornId,dados) {
+  setSyncStatus('sync');
+  try {
+    const existing = S.cotacoes[prodId]&&S.cotacoes[prodId][fornId];
+    const id = (existing&&existing.id) || uid();
+    await sbUpsert('cotacao_precos',{
+      id,produto_id:prodId,fornecedor_id:fornId,
+      preco:dados.preco?parseFloat(dados.preco):null,
+      prazo:dados.prazo||null,
+      desconto:dados.desconto?parseFloat(dados.desconto):null,
+      validade:dados.validade||null,
+      updated_at:new Date().toISOString()
+    });
+    if(!S.cotacoes[prodId]) S.cotacoes[prodId]={};
+    S.cotacoes[prodId][fornId]={...dados,id};
+    setSyncStatus('ok');
+  } catch(e){setSyncStatus('err');}
+}
+async function saveHistorico(obj) {
+  setSyncStatus('sync');
+  try {
+    await sbUpsert('cotacao_historico',{
+      id:obj.id, nome:obj.nome, data:obj.data,
+      snapshot:{fornecedores:S.fornecedores,produtos:S.produtos,cotacoes:S.cotacoes}
+    });
+    setSyncStatus('ok');
+  } catch(e){setSyncStatus('err');}
+}
+
+// ══ UTILS ══
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d);}
 function fecharM(id){document.getElementById(id).style.display='none';}
@@ -820,265 +402,262 @@ function abrirTab(n,el){
   if(n==='combo')calcularCombo();if(n==='graficos')renderHist();
 }
 
-// FORNECEDORES
+// ══ FORNECEDORES ══
 function abrirMF(id){
   document.getElementById('fid').value=id||'';
   if(id){const f=S.fornecedores.find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';}
   else{['fnome','ftel','fprazo','fobs'].forEach(x=>document.getElementById(x).value='');}
   abrirM('mforn');setTimeout(()=>document.getElementById('fnome').focus(),80);
 }
-function salvarF(){
-  const nome=document.getElementById('fnome').value.trim();if(!nome){toast('⚠️ Informe o nome');return;}
+async function salvarF(){
+  const nome=document.getElementById('fnome').value.trim();if(!nome){toast('Informe o nome');return;}
   const id=document.getElementById('fid').value||uid();
   const obj={id,nome,contato:document.getElementById('ftel').value.trim(),prazo:document.getElementById('fprazo').value,obs:document.getElementById('fobs').value.trim()};
   const i=S.fornecedores.findIndex(x=>x.id===id);if(i>=0)S.fornecedores[i]=obj;else S.fornecedores.push(obj);
-  salvar();renderForn();fecharM('mforn');toast('✅ Fornecedor salvo');
+  renderForn();fecharM('mforn');
+  await saveF(obj);toast('Fornecedor salvo na nuvem');
 }
-function excluirF(id){
+async function excluirF(id){
   if(!confirm('Remover fornecedor?'))return;
   S.fornecedores=S.fornecedores.filter(x=>x.id!==id);
   Object.keys(S.cotacoes).forEach(pid=>{delete S.cotacoes[pid][id];});
-  salvar();renderForn();toast('🗑 Removido');
+  renderForn();setSyncStatus('sync');
+  await sbDelete('cotacao_fornecedores',id);
+  setSyncStatus('ok');toast('Removido');
 }
 function renderForn(){
   const el=document.getElementById('lista-forn');
-  if(!S.fornecedores.length){el.innerHTML=`<div class="empty"><div class="ei">🏪</div><div class="et">Nenhum fornecedor. Clique em "+ Adicionar".</div></div>`;return;}
-  el.innerHTML=`<div class="forn-grid">${S.fornecedores.map(f=>`<div class="forn-card"><div class="fn">${f.nome}</div>${f.contato?`<div class="fd">📞 ${f.contato}</div>`:''} ${f.prazo?`<div class="fd">📅 ${f.prazo} dias</div>`:''} ${f.obs?`<div class="fd">💬 ${f.obs}</div>`:''}<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF('${f.id}')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF('${f.id}')">🗑</button></div></div>`).join('')}</div>`;
+  if(!S.fornecedores.length){el.innerHTML='<div class="empty"><div class="ei">🏪</div><div class="et">Nenhum fornecedor. Clique em "+ Adicionar".</div></div>';return;}
+  el.innerHTML='<div class="forn-grid">'+S.fornecedores.map(f=>'<div class="forn-card"><div class="fn">'+f.nome+'</div>'+(f.contato?'<div class="fd">📞 '+f.contato+'</div>':'')+(f.prazo?'<div class="fd">📅 '+f.prazo+' dias</div>':'')+(f.obs?'<div class="fd">💬 '+f.obs+'</div>':'')+'<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF(\''+f.id+'\')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF(\''+f.id+'\')">🗑</button></div></div>').join('')+'</div>';
 }
-renderForn();
 
-// PRODUTOS
+// ══ PRODUTOS ══
 function abrirMP(id){
   document.getElementById('pid').value=id||'';
   if(id){const p=S.produtos.find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;}
   else{['pnome','pcodigo'].forEach(x=>document.getElementById(x).value='');document.getElementById('punid').value='CX';document.getElementById('pqtd').value=1;}
   abrirM('mprod');setTimeout(()=>document.getElementById('pnome').focus(),80);
 }
-function salvarP(){
-  const nome=document.getElementById('pnome').value.trim();if(!nome){toast('⚠️ Informe o nome');return;}
+async function salvarP(){
+  const nome=document.getElementById('pnome').value.trim();if(!nome){toast('Informe o nome');return;}
   const id=document.getElementById('pid').value||uid();
   const obj={id,nome,codigo:document.getElementById('pcodigo').value.trim(),unidade:document.getElementById('punid').value,qtd:parseInt(document.getElementById('pqtd').value)||1};
   const i=S.produtos.findIndex(x=>x.id===id);if(i>=0)S.produtos[i]=obj;else S.produtos.push(obj);
-  salvar();renderProd();fecharM('mprod');toast('✅ Produto salvo');
+  renderProd();fecharM('mprod');
+  await saveP(obj);toast('Produto salvo na nuvem');
 }
-function excluirP(id){
+async function excluirP(id){
   if(!confirm('Remover produto?'))return;
   S.produtos=S.produtos.filter(x=>x.id!==id);delete S.cotacoes[id];
-  salvar();renderProd();toast('🗑 Removido');
+  renderProd();setSyncStatus('sync');
+  await sbDelete('cotacao_produtos',id);
+  setSyncStatus('ok');toast('Removido');
 }
 function renderProd(){
   const el=document.getElementById('lista-prod');
-  if(!S.produtos.length){el.innerHTML=`<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto. Adicione ou importe .txt (um por linha).</div></div>`;return;}
-  el.innerHTML=`<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Código</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>${S.produtos.map((p,i)=>`<tr><td style="color:var(--cinza3);font-size:11px;font-family:'DM Mono',monospace">${String(i+1).padStart(2,'0')}</td><td class="pn">${p.nome}</td><td style="font-size:11px;color:var(--cinza4);font-family:'DM Mono',monospace">${p.codigo||'—'}</td><td style="text-align:center">${p.qtd}</td><td><span class="chip">${p.unidade}</span></td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-xs" onclick="abrirMP('${p.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="excluirP('${p.id}')">🗑</button></td></tr>`).join('')}</tbody></table></div>`;
+  if(!S.produtos.length){el.innerHTML='<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto. Adicione ou importe .txt (um por linha).</div></div>';return;}
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+S.produtos.map((p,i)=>'<tr><td style="color:var(--cinza3);font-size:11px;font-family:\'DM Mono\',monospace">'+String(i+1).padStart(2,'0')+'</td><td class="pn">'+p.nome+'</td><td style="font-size:11px;color:var(--cinza4);font-family:\'DM Mono\',monospace">'+(p.codigo||'—')+'</td><td style="text-align:center">'+p.qtd+'</td><td><span class="chip">'+p.unidade+'</span></td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-xs" onclick="abrirMP(\''+p.id+'\')">✏️</button><button class="btn btn-danger btn-xs" onclick="excluirP(\''+p.id+'\')">🗑</button></td></tr>').join('')+'</tbody></table></div>';
 }
-renderProd();
 
-function importarCSV(e){
+async function importarCSV(e){
   const file=e.target.files[0];if(!file)return;
   const r=new FileReader();
-  r.onload=ev=>{
+  r.onload=async function(ev){
     const linhas=ev.target.result.split('\n').map(l=>l.trim()).filter(Boolean);let added=0;
-    linhas.forEach(l=>{const p=l.split(/[,;\t]/);let nome,codigo='';if(p.length>=2){codigo=p[0].trim();nome=p[1].trim();}else nome=p[0].trim();
-    if(nome&&!S.produtos.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){S.produtos.push({id:uid(),nome,codigo,unidade:'CX',qtd:1});added++;}});
-    salvar();renderProd();toast(`✅ ${added} produto(s) importado(s)`);e.target.value='';
+    for(const l of linhas){
+      const p=l.split(/[,;\t]/);let nome,codigo='';
+      if(p.length>=2){codigo=p[0].trim();nome=p[1].trim();}else nome=p[0].trim();
+      if(nome&&!S.produtos.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
+        const obj={id:uid(),nome,codigo,unidade:'CX',qtd:1};
+        S.produtos.push(obj);await saveP(obj);added++;
+      }
+    }
+    renderProd();toast(added+' produto(s) importado(s)!');e.target.value='';
   };r.readAsText(file);
 }
 
-// COTAÇÃO
+// ══ COTACAO ══
 function renderCot(){
   const upEl=document.getElementById('upload-forn'),tabEl=document.getElementById('tab-cot'),avEl=document.getElementById('av');
-  if(!S.fornecedores.length||!S.produtos.length){upEl.innerHTML='';tabEl.innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Cadastre fornecedores e produtos primeiro.</div></div>`;avEl.innerHTML='';return;}
-
+  if(!S.fornecedores.length||!S.produtos.length){upEl.innerHTML='';tabEl.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Cadastre fornecedores e produtos primeiro.</div></div>';avEl.innerHTML='';return;}
   let alertas=[];
-  S.fornecedores.forEach(f=>S.produtos.forEach(p=>{const c=S.cotacoes[p.id]?.[f.id]||{};
-    if(c.validade){if(vencido(c.validade))alertas.push(`⛔ <b>${f.nome}</b> › ${p.nome} — preço <b>vencido</b> (${c.validade})`);
-    else if(proximo(c.validade))alertas.push(`⚠️ <b>${f.nome}</b> › ${p.nome} — vence em ${c.validade}`);}
-  }));
-  avEl.innerHTML=alertas.map(a=>`<div class="av-box">${a}</div>`).join('');
-
-  upEl.innerHTML=S.fornecedores.map(f=>`<button class="btn btn-outline btn-sm" onclick="abrirUpload('${f.id}')">📄 PDF/IMG — ${f.nome}</button>`).join('');
-  S.produtos.forEach(p=>{if(!S.cotacoes[p.id])S.cotacoes[p.id]={};});
-
-  function melhor(pid){const c=S.cotacoes[pid]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return mf;}
-
-  tabEl.innerHTML=`<table><thead><tr><th>Produto</th><th>Qtd</th>${S.fornecedores.map(f=>`<th class="fh" colspan="4">${f.nome}</th>`).join('')}</tr><tr><th></th><th></th>${S.fornecedores.map(()=>`<th class="fh" style="font-size:9px">Preço R$</th><th class="fh" style="font-size:9px">Prazo</th><th class="fh" style="font-size:9px">Desc.%</th><th class="fh" style="font-size:9px">Validade</th>`).join('')}</tr></thead><tbody>${S.produtos.map(p=>{const mf=melhor(p.id);return`<tr><td class="pn">${p.nome}</td><td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px">${p.qtd}</td>${S.fornecedores.map(f=>{const c=S.cotacoes[p.id]?.[f.id]||{};const im=mf===f.id;const venc=vencido(c.validade);const prox=proximo(c.validade);return`<td class="pc ${im?'mp':''}"><input type="number" min="0" step="0.01" value="${c.preco||''}" placeholder="0,00" onchange="setC('${p.id}','${f.id}','preco',this.value)"></td><td class="pz"><input type="number" min="0" value="${c.prazo||''}" placeholder="${S.fornecedores.find(x=>x.id===f.id)?.prazo||''}" onchange="setC('${p.id}','${f.id}','prazo',this.value)"></td><td class="dc"><input type="number" min="0" max="100" step="0.1" value="${c.desconto||''}" placeholder="0" onchange="setC('${p.id}','${f.id}','desconto',this.value)"></td><td class="vd"><input type="date" value="${c.validade||''}" style="${venc?'border-color:var(--erro);color:var(--erro)':prox?'border-color:var(--alerta);color:#92400E':''}" onchange="setC('${p.id}','${f.id}','validade',this.value)"></td>`;}).join('')}</tr>`;}).join('')}</tbody></table>`;
+  S.fornecedores.forEach(function(f){S.produtos.forEach(function(p){var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};if(c.validade){if(vencido(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco VENCIDO ('+c.validade+')');else if(proximo(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);}});});
+  avEl.innerHTML=alertas.map(function(a){return'<div class="av-box">⏰ '+a+'</div>';}).join('');
+  upEl.innerHTML=S.fornecedores.map(f=>'<button class="btn btn-outline btn-sm" onclick="abrirUpload(\''+f.id+'\')">📄 PDF/IMG — '+f.nome+'</button>').join('');
+  function melhor(pid){var c=S.cotacoes[pid]||{};var min=Infinity,mf=null;S.fornecedores.forEach(f=>{var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return mf;}
+  tabEl.innerHTML='<table><thead><tr><th>Produto</th><th>Qtd</th>'+S.fornecedores.map(f=>'<th class="fh" colspan="4">'+f.nome+'</th>').join('')+'</tr><tr><th></th><th></th>'+S.fornecedores.map(()=>'<th class="fh" style="font-size:9px">Preco R$</th><th class="fh" style="font-size:9px">Prazo</th><th class="fh" style="font-size:9px">Desc.%</th><th class="fh" style="font-size:9px">Validade</th>').join('')+'</tr></thead><tbody>'+S.produtos.map(p=>{var mf=melhor(p.id);return'<tr><td class="pn">'+p.nome+'</td><td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:11px">'+p.qtd+'</td>'+S.fornecedores.map(f=>{var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};var im=mf===f.id;var venc=vencido(c.validade);var prox=proximo(c.validade);return'<td class="pc '+(im?'mp':'')+'"><input type="number" min="0" step="0.01" value="'+(c.preco||'')+'" placeholder="0,00" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'preco\',this.value)"></td><td class="pz"><input type="number" min="0" value="'+(c.prazo||'')+'" placeholder="'+(S.fornecedores.find(x=>x.id===f.id)||{}).prazo+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'prazo\',this.value)"></td><td class="dc"><input type="number" min="0" max="100" step="0.1" value="'+(c.desconto||'')+'" placeholder="0" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'desconto\',this.value)"></td><td class="vd"><input type="date" value="'+(c.validade||'')+'" style="'+(venc?'border-color:var(--erro);color:var(--erro)':prox?'border-color:var(--alerta);color:#92400E':'')+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'validade\',this.value)"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
 }
 
+let saveTimer={};
 function setC(pid,fid,k,v){
   if(!S.cotacoes[pid])S.cotacoes[pid]={};
   if(!S.cotacoes[pid][fid])S.cotacoes[pid][fid]={};
   S.cotacoes[pid][fid][k]=v;
-  salvar();
   atuDest();
+  // Debounce save per produto+forn pair
+  const key=pid+'_'+fid;
+  clearTimeout(saveTimer[key]);
+  saveTimer[key]=setTimeout(async function(){
+    await savePreco(pid,fid,S.cotacoes[pid][fid]);
+  },800);
+  // update alerts
   let alertas=[];
-  S.fornecedores.forEach(function(f){
-    S.produtos.forEach(function(p){
-      var c=S.cotacoes[p.id]&&S.cotacoes[p.id][f.id]?S.cotacoes[p.id][f.id]:{};
-      if(c.validade){
-        if(vencido(c.validade)) alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco vencido');
-        else if(proximo(c.validade)) alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);
-      }
-    });
-  });
-  document.getElementById('av').innerHTML=alertas.map(function(a){return '<div class="av-box">'+a+'</div>';}).join('');
+  S.fornecedores.forEach(function(f){S.produtos.forEach(function(p){var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};if(c.validade){if(vencido(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco VENCIDO');else if(proximo(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);}});});
+  document.getElementById('av').innerHTML=alertas.map(function(a){return'<div class="av-box">⏰ '+a+'</div>';}).join('');
 }
 
 function atuDest(){
   S.produtos.forEach(p=>{
-    const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;
-    S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});
+    var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;
+    S.fornecedores.forEach(f=>{var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});
     S.fornecedores.forEach(f=>{
-      const rows=document.querySelectorAll('#tab-cot tbody tr');const ri=S.produtos.findIndex(x=>x.id===p.id);const ci=S.fornecedores.findIndex(x=>x.id===f.id);
-      if(rows[ri]){const ti=2+ci*4;const td=rows[ri].cells[ti];if(td)td.classList.toggle('mp',f.id===mf&&mf!==null);}
+      var rows=document.querySelectorAll('#tab-cot tbody tr');
+      var ri=S.produtos.findIndex(x=>x.id===p.id);
+      var ci=S.fornecedores.findIndex(x=>x.id===f.id);
+      if(rows[ri]){var ti=2+ci*4;var td=rows[ri].cells[ti];if(td)td.classList.toggle('mp',f.id===mf&&mf!==null);}
     });
   });
 }
 
-// PDF/IMG IA
+// ══ PDF/IMG IA ══
 function abrirUpload(fid){
-  pdfFornId=fid;pdfDados=[];const f=S.fornecedores.find(x=>x.id===fid);
+  pdfFornId=fid;pdfDados=[];var f=S.fornecedores.find(x=>x.id===fid);
   document.getElementById('pdfnome').textContent=f.nome;
   document.getElementById('pdfstatus').textContent='';
   document.getElementById('pdfpreview').style.display='none';
   document.getElementById('pdfcancel').style.display='flex';
   document.getElementById('ipdf').value='';abrirM('mpdf');
 }
-
 async function processarArquivo(e){
-  const file=e.target.files[0];if(!file)return;
-  const stEl=document.getElementById('pdfstatus'),pvEl=document.getElementById('pdfpreview');
+  var file=e.target.files[0];if(!file)return;
+  var stEl=document.getElementById('pdfstatus'),pvEl=document.getElementById('pdfpreview');
   document.getElementById('pdfcancel').style.display='none';
-  stEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span> Lendo com IA... aguarde</div>`;
+  stEl.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span> Lendo com IA... aguarde</div>';
   pvEl.style.display='none';
-
-  const isImg=file.type.startsWith('image/');
-  const base64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Erro'));r.readAsDataURL(file);});
-  const lista=S.produtos.map((p,i)=>`${i+1}. ${p.nome}${p.codigo?' ['+p.codigo+']':''}`).join('\n');
-  const prompt=`Analise este orçamento farmacêutico. Minha lista:\n${lista}\n\nExtraia os preços. Responda APENAS com JSON:\n{"itens":[{"nomePDF":"","preco":0,"prazo":null,"desconto":null,"validade":null,"idxMinha":1}]}\nvalidade no formato YYYY-MM-DD ou null. Sem texto extra.`;
-
+  var isImg=file.type.startsWith('image/');
+  var base64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=function(){rej(new Error('Erro'));};r.readAsDataURL(file);});
+  var lista=S.produtos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ['+p.codigo+']':'');}).join('\n');
+  var prompt='Analise este orcamento farmaceutico. Minha lista:\n'+lista+'\n\nExtraia os precos. Responda APENAS com JSON:\n{"itens":[{"nomePDF":"","preco":0,"prazo":null,"desconto":null,"validade":null,"idxMinha":1}]}\nvalidade no formato YYYY-MM-DD ou null. Sem texto extra.';
   try{
-    const block=isImg
-      ?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]
-      :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:block}]})});
-    const data=await resp.json();
-    const txt=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(txt);pdfDados=parsed.itens||[];
-    if(!pdfDados.length){stEl.innerHTML=`<span style="color:var(--erro)">⚠️ Nenhum produto encontrado. Verifique se o arquivo está legível.</span>`;document.getElementById('pdfcancel').style.display='flex';return;}
-    stEl.innerHTML=`<span style="color:var(--verde)">✅ ${pdfDados.length} item(s) encontrado(s)</span>`;
-    document.getElementById('pdftab').innerHTML=`<table><thead><tr><th>No doc.</th><th>Preço</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>${pdfDados.map(item=>{const m=item.idxMinha?S.produtos[item.idxMinha-1]:null;return`<tr><td style="font-size:11px">${item.nomePDF}</td><td style="font-family:'DM Mono',monospace">${moeda(item.preco)}</td><td style="text-align:center">${item.prazo||'—'}</td><td style="text-align:center">${item.desconto?item.desconto+'%':'—'}</td><td style="text-align:center">${item.validade||'—'}</td><td style="font-size:11px;color:var(--verde)">${m?'✅ '+m.nome:'❓ Não mapeado'}</td></tr>`;}).join('')}</tbody></table>`;
+    var block=isImg?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:block}]})});
+    var data=await resp.json();
+    var txt=data.content.map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim();
+    var parsed=JSON.parse(txt);pdfDados=parsed.itens||[];
+    if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
+    stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
+    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item){var m=item.idxMinha?S.produtos[item.idxMinha-1]:null;return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:\'DM Mono\',monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'—')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'—')+'</td><td style="text-align:center">'+(item.validade||'—')+'</td><td style="font-size:11px;color:var(--verde)">'+(m?'OK '+m.nome:'Nao mapeado')+'</td></tr>';}).join('')+'</tbody></table>';
     pvEl.style.display='block';
-  }catch(err){stEl.innerHTML=`<span style="color:var(--erro)">❌ Erro: ${err.message}</span>`;document.getElementById('pdfcancel').style.display='flex';}
+  }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
+}
+async function aplicarPDF(){
+  var ap=0;
+  for(var item of pdfDados){
+    if(!item.idxMinha)continue;var prod=S.produtos[item.idxMinha-1];if(!prod)continue;
+    var dados={preco:item.preco||'',prazo:item.prazo||'',desconto:item.desconto||'',validade:item.validade||''};
+    await savePreco(prod.id,pdfFornId,dados);ap++;
+  }
+  fecharM('mpdf');toast(ap+' preco(s) salvos na nuvem!');
 }
 
-function aplicarPDF(){
-  let ap=0;
-  pdfDados.forEach(item=>{if(!item.idxMinha)return;const prod=S.produtos[item.idxMinha-1];if(!prod)return;if(!S.cotacoes[prod.id])S.cotacoes[prod.id]={};S.cotacoes[prod.id][pdfFornId]={preco:item.preco||'',prazo:item.prazo||'',desconto:item.desconto||'',validade:item.validade||''};ap++;});
-  salvar();fecharM('mpdf');toast(`✅ ${ap} preço(s) aplicado(s)`);
-}
+var dz=document.getElementById('pdfzone');
+if(dz){dz.addEventListener('dragover',function(e){e.preventDefault();dz.style.background='var(--verde-bg)';});dz.addEventListener('dragleave',function(){dz.style.background='';});dz.addEventListener('drop',function(e){e.preventDefault();dz.style.background='';var f=e.dataTransfer.files[0];if(f){var dt=new DataTransfer();dt.items.add(f);document.getElementById('ipdf').files=dt.files;processarArquivo({target:{files:[f]}});}});}
 
-const dz=document.getElementById('pdfzone');
-if(dz){dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.background='var(--verde-bg)';});dz.addEventListener('dragleave',()=>dz.style.background='');dz.addEventListener('drop',e=>{e.preventDefault();dz.style.background='';const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);document.getElementById('ipdf').files=dt.files;processarArquivo({target:{files:[f]}});}});}
-
-// PLACAR
+// ══ PLACAR ══
 function calcularPlacar(){
-  const el=document.getElementById('placar');
-  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML=`<div class="empty"><div class="ei">🏆</div><div class="et">Cadastre dados primeiro.</div></div>`;return;}
-  const sc={},tot={};S.fornecedores.forEach(f=>{sc[f.id]=0;tot[f.id]=0;});let com=0;
-  S.produtos.forEach(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
-  if(!com){el.innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Preencha os preços no Comparativo.</div></div>`;return;}
-  const mx=Math.max(...Object.values(sc));
-  const sorted=[...S.fornecedores].sort((a,b)=>sc[b.id]-sc[a.id]);
-  el.innerHTML=`<p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Baseado em <strong>${com}</strong> produto(s) com preços.</p><div class="placar-grid">${sorted.map(f=>{const ic=sc[f.id]===mx&&mx>0;return`<div class="placar-card ${ic?'cx':''}">${ic?'<div style="font-size:18px">👑</div>':''}<div class="pn2">${f.nome}</div><div class="pnum">${sc[f.id]}</div><div class="plbl">item(s) mais barato(s)</div>${tot[f.id]>0?`<div style="margin-top:5px;font-size:11px;color:var(--cinza4)">Total: ${moeda(tot[f.id])}</div>`:''}</div>`;}).join('')}</div><div class="card" style="margin-top:14px;padding:14px"><div class="card-title">Resumo por Produto</div><div class="table-wrap"><table><thead><tr><th>Produto</th>${S.fornecedores.map(f=>`<th style="text-align:center">${f.nome}</th>`).join('')}<th>🏆 Vencedor</th></tr></thead><tbody>${S.produtos.map(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return`<tr><td class="pn">${p.nome}</td>${S.fornecedores.map(f=>{const v=parseFloat(c[f.id]?.preco);const im=mf===f.id;return`<td style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;${im?'color:var(--verde);font-weight:600':''}">${!isNaN(v)&&v>0?moeda(v):'—'}</td>`;}).join('')}<td style="text-align:center">${mf?`<span class="wb">${S.fornecedores.find(f=>f.id===mf)?.nome}</span>`:'—'}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+  var el=document.getElementById('placar');
+  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML='<div class="empty"><div class="ei">🏆</div><div class="et">Cadastre dados primeiro.</div></div>';return;}
+  var sc={},tot={};S.fornecedores.forEach(function(f){sc[f.id]=0;tot[f.id]=0;});var com=0;
+  S.produtos.forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
+  if(!com){el.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
+  var mx=Math.max(...Object.values(sc));
+  var sorted=[...S.fornecedores].sort(function(a,b){return sc[b.id]-sc[a.id];});
+  el.innerHTML='<p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Baseado em <strong>'+com+'</strong> produto(s).</p><div class="placar-grid">'+sorted.map(function(f){var ic=sc[f.id]===mx&&mx>0;return'<div class="placar-card '+(ic?'cx':'')+'"><div class="pn2">'+f.nome+'</div><div class="pnum">'+sc[f.id]+'</div><div class="plbl">item(s) mais barato(s)</div>'+(tot[f.id]>0?'<div style="margin-top:5px;font-size:11px;color:var(--cinza4)">Total: '+moeda(tot[f.id])+'</div>':'')+'</div>';}).join('')+'</div><div class="card" style="margin-top:14px;padding:14px"><div class="card-title">Resumo por Produto</div><div class="table-wrap"><table><thead><tr><th>Produto</th>'+S.fornecedores.map(function(f){return'<th style="text-align:center">'+f.nome+'</th>';}).join('')+'<th>Vencedor</th></tr></thead><tbody>'+S.produtos.map(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return'<tr><td class="pn">'+p.nome+'</td>'+S.fornecedores.map(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);var im=mf===f.id;return'<td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:12px;'+(im?'color:var(--verde);font-weight:600':'')+'">'+((!isNaN(v)&&v>0)?moeda(v):'—')+'</td>';}).join('')+'<td style="text-align:center">'+(mf?'<span class="wb">'+(S.fornecedores.find(function(f){return f.id===mf;})||{}).nome+'</span>':'—')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
 }
 
-// COMBO IDEAL
+// ══ COMBO IDEAL ══
 function calcularCombo(){
-  const el=document.getElementById('combo');
-  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML=`<div class="empty"><div class="ei">💡</div><div class="et">Cadastre dados e preencha os preços.</div></div>`;return;}
-  let totalIdeal=0,totF={};S.fornecedores.forEach(f=>totF[f.id]=0);const linhas=[];
-  S.produtos.forEach(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p,mf,min});}});
-  if(!linhas.length){el.innerHTML=`<div class="empty"><div class="ei">💡</div><div class="et">Preencha os preços no Comparativo para calcular.</div></div>`;return;}
-  const melhorUnico=Math.min(...S.fornecedores.map(f=>totF[f.id]).filter(v=>v>0));
-  const eco=melhorUnico-totalIdeal;
-  el.innerHTML=`<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase;letter-spacing:.5px">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:'DM Mono',monospace">${moeda(totalIdeal)}</div></div>${eco>0?`<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase;letter-spacing:.5px">Economia vs. 1 fornecedor só</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:'DM Mono',monospace">+ ${moeda(eco)}</div></div>`:''}</div>${linhas.map(({p,mf,min})=>{const f=S.fornecedores.find(x=>x.id===mf);return`<div class="combo-row"><div class="cp1">${p.nome} <span style="color:var(--cinza3);font-size:11px">× ${p.qtd}</span></div><div><span class="wb">${f?.nome}</span></div><div class="cp3">${moeda(min)}</div><div class="cp4">subtotal ${moeda(min*(p.qtd||1))}</div></div>`;}).join('')}`;
+  var el=document.getElementById('combo');
+  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Cadastre dados e preencha os precos.</div></div>';return;}
+  var totalIdeal=0,totF={};S.fornecedores.forEach(function(f){totF[f.id]=0;});var linhas=[];
+  S.produtos.forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p:p,mf:mf,min:min});}});
+  if(!linhas.length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
+  var melhorUnico=Math.min(...S.fornecedores.map(function(f){return totF[f.id];}).filter(function(v){return v>0;}));
+  var eco=melhorUnico-totalIdeal;
+  el.innerHTML='<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div>':'')+'</div>'+linhas.map(function(x){var f=S.fornecedores.find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('');
 }
 
-// WHATSAPP
+// ══ WHATSAPP ══
 function enviarWhatsApp(){
-  if(!S.fornecedores.length){toast('⚠️ Cadastre fornecedores primeiro');return;}
-  if(!S.produtos.length){toast('⚠️ Cadastre produtos primeiro');return;}
-  const el=document.getElementById('wpplist');
-  const comTel=S.fornecedores.filter(f=>f.contato);
-  el.innerHTML=comTel.map(f=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza2)"><div><div style="font-weight:600">${f.nome}</div><div style="font-size:12px;color:var(--cinza4)">${f.contato}</div></div><button class="btn btn-green btn-sm" onclick="abrirWpp('${f.id}')">📲 Enviar</button></div>`).join('')+(!comTel.length?`<p style="font-size:12px;color:var(--cinza4);padding:10px 0">Nenhum fornecedor com WhatsApp cadastrado.</p>`:S.fornecedores.some(f=>!f.contato)?`<p style="font-size:11px;color:var(--cinza4);margin-top:8px">⚠️ Alguns fornecedores não têm número — edite-os para adicionar.</p>`:'');
+  if(!S.fornecedores.length){toast('Cadastre fornecedores primeiro');return;}
+  if(!S.produtos.length){toast('Cadastre produtos primeiro');return;}
+  var el=document.getElementById('wpplist');
+  var comTel=S.fornecedores.filter(function(f){return f.contato;});
+  el.innerHTML=comTel.map(function(f){return'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza2)"><div><div style="font-weight:600">'+f.nome+'</div><div style="font-size:12px;color:var(--cinza4)">'+f.contato+'</div></div><button class="btn btn-green btn-sm" onclick="abrirWpp(\''+f.id+'\')">📲 Enviar</button></div>';}).join('')+(!comTel.length?'<p style="font-size:12px;color:var(--cinza4);padding:10px 0">Nenhum fornecedor com WhatsApp.</p>':'');
   abrirM('mwpp');
 }
-
 function abrirWpp(fid){
-  const f=S.fornecedores.find(x=>x.id===fid);
-  const lista=S.produtos.map((p,i)=>`${i+1}. ${p.nome}${p.codigo?' ('+p.codigo+')':''} — Qtd: ${p.qtd} ${p.unidade}`).join('\n');
-  const txt=`Olá, ${f.nome}! 🙋\n\nSeguem os produtos para cotação da *MS Farma*:\n\n${lista}\n\nAguardo o orçamento. Obrigada! 💊`;
-  const num=f.contato.replace(/\D/g,'');
-  window.open(`https://wa.me/55${num}?text=${encodeURIComponent(txt)}`,'_blank');
-  fecharM('mwpp');toast('📲 Abrindo WhatsApp...');
+  var f=S.fornecedores.find(function(x){return x.id===fid;});
+  var lista=S.produtos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ('+p.codigo+')':'')+' — Qtd: '+p.qtd+' '+p.unidade;}).join('\n');
+  var txt='Ola, '+f.nome+'!\n\nSeguem os produtos para cotacao da *MS Farma*:\n\n'+lista+'\n\nAguardo o orcamento. Obrigada!';
+  var num=f.contato.replace(/\D/g,'');
+  window.open('https://wa.me/55'+num+'?text='+encodeURIComponent(txt),'_blank');
+  fecharM('mwpp');toast('Abrindo WhatsApp...');
 }
 
-// HISTÓRICO
-function salvarHistorico(){
-  if(!S.produtos.length||!S.fornecedores.length){toast('⚠️ Nada para salvar');return;}
-  const nome=prompt('Nome desta cotação:','Cotação '+new Date().toLocaleDateString('pt-BR'));
+// ══ HISTORICO ══
+async function salvarHistorico(){
+  if(!S.produtos.length||!S.fornecedores.length){toast('Nada para salvar');return;}
+  var nome=prompt('Nome desta cotacao:','Cotacao '+new Date().toLocaleDateString('pt-BR'));
   if(!nome)return;
-  S.historico.unshift({id:uid(),nome,data:hoje(),fornecedores:[...S.fornecedores],produtos:[...S.produtos],cotacoes:JSON.parse(JSON.stringify(S.cotacoes))});
-  if(S.historico.length>20)S.historico=S.historico.slice(0,20);
-  salvar();renderHist();toast('💾 Cotação salva!');
+  var obj={id:uid(),nome:nome,data:hoje()};
+  S.historico.unshift(obj);
+  await saveHistorico(obj);
+  renderHist();toast('Cotacao salva na nuvem!');
 }
-
-function excluirHist(id){
-  if(!confirm('Remover do histórico?'))return;
-  S.historico=S.historico.filter(x=>x.id!==id);salvar();renderHist();toast('🗑 Removido');
+async function excluirHist(id){
+  if(!confirm('Remover do historico?'))return;
+  S.historico=S.historico.filter(function(x){return x.id!==id;});
+  await sbDelete('cotacao_historico',id);
+  renderHist();toast('Removido');
 }
-
-function restaurarHist(id){
-  if(!confirm('Restaurar esta cotação? Os dados atuais serão substituídos.'))return;
-  const h=S.historico.find(x=>x.id===id);if(!h)return;
-  S.fornecedores=h.fornecedores;S.produtos=h.produtos;S.cotacoes=h.cotacoes;
-  salvar();toast('✅ Cotação restaurada!');
-}
-
 function renderHist(){
-  const el=document.getElementById('hist');
-  if(!S.historico.length){el.innerHTML=`<div class="empty"><div class="ei">📂</div><div class="et">Nenhuma cotação salva.<br>Clique em "Salvar cotação atual" para guardar.</div></div>`;document.getElementById('card-graf').style.display='none';return;}
-  el.innerHTML=S.historico.map(h=>`<div class="hi"><div class="hh"><div><div class="hn">${h.nome}</div><div class="hd">${h.data} · ${h.fornecedores.length} fornecedor(es) · ${h.produtos.length} produto(s)</div></div><div style="display:flex;gap:5px"><button class="btn btn-outline btn-xs" onclick="restaurarHist('${h.id}')">↩ Restaurar</button><button class="btn btn-danger btn-xs" onclick="excluirHist('${h.id}')">🗑</button></div></div></div>`).join('');
+  var el=document.getElementById('hist');
+  if(!S.historico.length){el.innerHTML='<div class="empty"><div class="ei">📂</div><div class="et">Nenhuma cotacao salva.<br>Clique em "Salvar cotacao atual".</div></div>';document.getElementById('card-graf').style.display='none';return;}
+  el.innerHTML=S.historico.map(function(h){return'<div class="hi"><div class="hh"><div><div class="hn">'+h.nome+'</div><div class="hd">'+(h.data||'')+'</div></div><div style="display:flex;gap:5px"><button class="btn btn-danger btn-xs" onclick="excluirHist(\''+h.id+'\')">🗑</button></div></div></div>';}).join('');
   document.getElementById('card-graf').style.display='block';
-  const sel=document.getElementById('sel-prod');
-  const todos=[...new Map(S.historico.flatMap(h=>h.produtos).map(p=>[p.nome,p])).values()];
-  sel.innerHTML=todos.map(p=>`<option value="${p.nome}">${p.nome}</option>`).join('');
+  var sel=document.getElementById('sel-prod');
+  var todos=[...new Map(S.historico.flatMap(function(h){return h.produtos||[];}).map(function(p){return[p.nome,p];}) ).values()];
+  sel.innerHTML=todos.map(function(p){return'<option value="'+p.nome+'">'+p.nome+'</option>';}).join('');
   renderGrafico();
 }
-
 function renderGrafico(){
-  const nome=document.getElementById('sel-prod').value;
-  const ctx=document.getElementById('cgraf');
+  var nome=document.getElementById('sel-prod').value;
+  var ctx=document.getElementById('cgraf');
   if(chartIns){chartIns.destroy();chartIns=null;}
   if(!nome||!S.historico.length)return;
-  const cores=['#1A6B4A','#2563EB','#D97706','#7C3AED','#DC2626','#059669'];
-  const fmap=new Map();S.historico.forEach(h=>h.fornecedores.forEach(f=>fmap.set(f.id,f.nome)));
-  const fids=[...fmap.keys()];
-  const labels=S.historico.map(h=>h.nome).reverse();
-  const datasets=fids.map((fid,i)=>({label:fmap.get(fid),data:S.historico.map(h=>{const p=h.produtos.find(x=>x.nome===nome);if(!p)return null;const v=parseFloat(h.cotacoes[p.id]?.[fid]?.preco);return isNaN(v)?null:v;}).reverse(),borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,pointRadius:4,fill:false}));
-  chartIns=new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11}}}},scales:{y:{ticks:{callback:v=>moeda(v),font:{family:'DM Mono',size:10}},grid:{color:'#E8ECEB'}},x:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false}}}}});
+  var cores=['#1A6B4A','#2563EB','#D97706','#7C3AED','#DC2626','#059669'];
+  var fmap=new Map();
+  S.historico.forEach(function(h){(h.fornecedores||[]).forEach(function(f){fmap.set(f.id,f.nome);});});
+  var fids=[...fmap.keys()];
+  var labels=S.historico.map(function(h){return h.nome;}).reverse();
+  var datasets=fids.map(function(fid,i){return{label:fmap.get(fid),data:S.historico.map(function(h){var p=(h.produtos||[]).find(function(x){return x.nome===nome;});if(!p)return null;var c=(h.cotacoes||{});var fc=(c[p.id]&&c[p.id][fid]);var v=fc?parseFloat(fc.preco):null;return isNaN(v)?null:v;}).reverse(),borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,pointRadius:4,fill:false};});
+  chartIns=new Chart(ctx,{type:'line',data:{labels:labels,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11}}}},scales:{y:{ticks:{callback:function(v){return moeda(v);},font:{family:'DM Mono',size:10}},grid:{color:'#E8ECEB'}},x:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false}}}}});
 }
 
-// EXPORTAR
+// ══ EXPORTAR ══
 function exportarExcel(){
-  if(!S.produtos.length||!S.fornecedores.length){toast('⚠️ Nada para exportar');return;}
-  let csv='Produto;Qtd;Un;'+S.fornecedores.map(f=>`${f.nome} - Preço;${f.nome} - Prazo;${f.nome} - Desc%;${f.nome} - Validade`).join(';')+';Vencedor\n';
-  S.produtos.forEach(p=>{const c=S.cotacoes[p.id]||{};let min=Infinity,mf=null;S.fornecedores.forEach(f=>{const v=parseFloat(c[f.id]?.preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});csv+=`"${p.nome}";${p.qtd};${p.unidade};`+S.fornecedores.map(f=>{const ct=c[f.id]||{};return`${ct.preco||''};${ct.prazo||''};${ct.desconto||''};${ct.validade||''}`;}).join(';')+`;${mf?S.fornecedores.find(f=>f.id===mf)?.nome:''}\n`;});
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`cotacao_msfarma_${hoje()}.csv`;a.click();toast('📥 Exportado!');
+  if(!S.produtos.length||!S.fornecedores.length){toast('Nada para exportar');return;}
+  var csv='Produto;Qtd;Un;'+S.fornecedores.map(function(f){return f.nome+' - Preco;'+f.nome+' - Prazo;'+f.nome+' - Desc%;'+f.nome+' - Validade';}).join(';')+';Vencedor\n';
+  S.produtos.forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});csv+='"'+p.nome+'";'+p.qtd+';'+p.unidade+';'+S.fornecedores.map(function(f){var ct=(c[f.id])||{};return(ct.preco||'')+';'+(ct.prazo||'')+';'+(ct.desconto||'')+';'+(ct.validade||'');}).join(';')+';'+(mf?(S.fornecedores.find(function(f){return f.id===mf;})||{}).nome:'')+'\n';});
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cotacao_msfarma_'+hoje()+'.csv';a.click();toast('Exportado!');
 }
 
-['mforn','mprod','mpdf','mwpp'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)fecharM(id);});});
+['mforn','mprod','mpdf','mwpp'].forEach(function(id){document.getElementById(id).addEventListener('click',function(e){if(e.target===this)fecharM(id);});});
+
+// ══ INIT ══
+carregarDados();
 </script>
 </body>
 </html>
