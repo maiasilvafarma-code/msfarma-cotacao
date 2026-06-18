@@ -438,7 +438,7 @@ async function excluirF(id){
 function renderForn(){
   const el=document.getElementById('lista-forn');
   if(!(S.fornecedores||[]).length){el.innerHTML='<div class="empty"><div class="ei">🏪</div><div class="et">Nenhum fornecedor. Clique em "+ Adicionar".</div></div>';return;}
-  el.innerHTML='<div class="forn-grid">'+(S.fornecedores||[]).map(f=>'<div class="forn-card"><div class="fn">'+f.nome+'</div>'+(f.contato?'<div class="fd">📞 '+f.contato+(f.contato2?' / '+f.contato2:'')+'</div>':'')+(f.prazo?'<div class="fd">📅 '+f.prazo+' dias</div>':'')+(f.obs?'<div class="fd">💬 '+f.obs+'</div>':'')+'<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF(\''+f.id+'\')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF(\''+f.id+'\')">🗑</button></div></div>').join('')+'</div>';
+  el.innerHTML='<div class="forn-grid">'+(S.fornecedores||[]).map(f=>'<div class="forn-card"><div class="fn">'+f.nome+'</div>'+(f.contato?'<div class="fd">📞 '+f.contato+(f.contato2?' / '+f.contato2:'')+'</div>':'')+(f.prazo?'<div class="fd">📅 '+f.prazo+' dias</div>':'')+(f.obs?'<div class="fd">💬 '+f.obs+'</div>':'')+'<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF(\''+f.id+'\')">✏ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF(\''+f.id+'\')">🗑</button></div></div>').join('')+'</div>';
 }
 
 // ══ PRODUTOS ══
@@ -466,7 +466,7 @@ async function excluirP(id){
 function renderProd(){
   const el=document.getElementById('lista-prod');
   if(!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto. Adicione ou importe .txt (um por linha).</div></div>';return;}
-  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+(S.produtos||[]).map((p,i)=>'<tr><td style="color:var(--cinza3);font-size:11px;font-family:\'DM Mono\',monospace">'+String(i+1).padStart(2,'0')+'</td><td class="pn">'+p.nome+'</td><td style="font-size:11px;color:var(--cinza4);font-family:\'DM Mono\',monospace">'+(p.codigo||'—')+'</td><td style="text-align:center">'+p.qtd+'</td><td><span class="chip">'+p.unidade+'</span></td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-xs" onclick="abrirMP(\''+p.id+'\')">✏️</button><button class="btn btn-danger btn-xs" onclick="excluirP(\''+p.id+'\')">🗑</button></td></tr>').join('')+'</tbody></table></div>';
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+(S.produtos||[]).map((p,i)=>'<tr><td style="color:var(--cinza3);font-size:11px;font-family:\'DM Mono\',monospace">'+String(i+1).padStart(2,'0')+'</td><td class="pn">'+p.nome+'</td><td style="font-size:11px;color:var(--cinza4);font-family:\'DM Mono\',monospace">'+(p.codigo||'—')+'</td><td style="text-align:center">'+p.qtd+'</td><td><span class="chip">'+p.unidade+'</span></td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-xs" onclick="abrirMP(\''+p.id+'\')">✏</button><button class="btn btn-danger btn-xs" onclick="excluirP(\''+p.id+'\')">🗑</button></td></tr>').join('')+'</tbody></table></div>';
 }
 
 async function importarCSV(e){
@@ -571,7 +571,7 @@ async function processarArquivo(e){
   pvEl.style.display='none';
 
   // Progress steps
-  var steps = ['📂 Preparando arquivo...', '🗜️ Otimizando imagem...', '📡 Enviando para IA...', '🤖 IA analisando preços...'];
+  var steps = ['📂 Preparando arquivo...', '🗜 Otimizando imagem...', '📡 Enviando para IA...', '🤖 IA analisando preços...'];
   var stepIdx = 0;
   function showStep(i) {
     stEl.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'
