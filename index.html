@@ -415,7 +415,7 @@ function abrirTab(n,el){
 // ══ FORNECEDORES ══
 function abrirMF(id){
   document.getElementById('fid').value=id||'';
-  if(id){const f=S.fornecedores.find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('ftel2').value=f.contato2||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';}
+  if(id){const f=(S.fornecedores||[]).find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('ftel2').value=f.contato2||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';}
   else{['fnome','ftel','ftel2','fprazo','fobs'].forEach(x=>document.getElementById(x).value='');}
   abrirM('mforn');setTimeout(()=>document.getElementById('fnome').focus(),80);
 }
@@ -429,7 +429,7 @@ async function salvarF(){
 }
 async function excluirF(id){
   if(!confirm('Remover fornecedor?'))return;
-  S.fornecedores=S.fornecedores.filter(x=>x.id!==id);
+  S.fornecedores=(S.fornecedores||[]).filter(x=>x.id!==id);
   Object.keys(S.cotacoes).forEach(pid=>{delete S.cotacoes[pid][id];});
   renderForn();setSyncStatus('sync');
   await sbDelete('cotacao_fornecedores',id);
@@ -437,14 +437,14 @@ async function excluirF(id){
 }
 function renderForn(){
   const el=document.getElementById('lista-forn');
-  if(!S.fornecedores.length){el.innerHTML='<div class="empty"><div class="ei">🏪</div><div class="et">Nenhum fornecedor. Clique em "+ Adicionar".</div></div>';return;}
-  el.innerHTML='<div class="forn-grid">'+S.fornecedores.map(f=>'<div class="forn-card"><div class="fn">'+f.nome+'</div>'+(f.contato?'<div class="fd">📞 '+f.contato+(f.contato2?' / '+f.contato2:'')+'</div>':'')+(f.prazo?'<div class="fd">📅 '+f.prazo+' dias</div>':'')+(f.obs?'<div class="fd">💬 '+f.obs+'</div>':'')+'<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF(\''+f.id+'\')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF(\''+f.id+'\')">🗑</button></div></div>').join('')+'</div>';
+  if(!(S.fornecedores||[]).length){el.innerHTML='<div class="empty"><div class="ei">🏪</div><div class="et">Nenhum fornecedor. Clique em "+ Adicionar".</div></div>';return;}
+  el.innerHTML='<div class="forn-grid">'+(S.fornecedores||[]).map(f=>'<div class="forn-card"><div class="fn">'+f.nome+'</div>'+(f.contato?'<div class="fd">📞 '+f.contato+(f.contato2?' / '+f.contato2:'')+'</div>':'')+(f.prazo?'<div class="fd">📅 '+f.prazo+' dias</div>':'')+(f.obs?'<div class="fd">💬 '+f.obs+'</div>':'')+'<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF(\''+f.id+'\')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF(\''+f.id+'\')">🗑</button></div></div>').join('')+'</div>';
 }
 
 // ══ PRODUTOS ══
 function abrirMP(id){
   document.getElementById('pid').value=id||'';
-  if(id){const p=S.produtos.find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;}
+  if(id){const p=(S.produtos||[]).find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;}
   else{['pnome','pcodigo'].forEach(x=>document.getElementById(x).value='');document.getElementById('punid').value='CX';document.getElementById('pqtd').value=1;}
   abrirM('mprod');setTimeout(()=>document.getElementById('pnome').focus(),80);
 }
@@ -458,15 +458,15 @@ async function salvarP(){
 }
 async function excluirP(id){
   if(!confirm('Remover produto?'))return;
-  S.produtos=S.produtos.filter(x=>x.id!==id);delete S.cotacoes[id];
+  S.produtos=(S.produtos||[]).filter(x=>x.id!==id);delete S.cotacoes[id];
   renderProd();setSyncStatus('sync');
   await sbDelete('cotacao_produtos',id);
   setSyncStatus('ok');toast('Removido');
 }
 function renderProd(){
   const el=document.getElementById('lista-prod');
-  if(!S.produtos.length){el.innerHTML='<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto. Adicione ou importe .txt (um por linha).</div></div>';return;}
-  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+S.produtos.map((p,i)=>'<tr><td style="color:var(--cinza3);font-size:11px;font-family:\'DM Mono\',monospace">'+String(i+1).padStart(2,'0')+'</td><td class="pn">'+p.nome+'</td><td style="font-size:11px;color:var(--cinza4);font-family:\'DM Mono\',monospace">'+(p.codigo||'—')+'</td><td style="text-align:center">'+p.qtd+'</td><td><span class="chip">'+p.unidade+'</span></td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-xs" onclick="abrirMP(\''+p.id+'\')">✏️</button><button class="btn btn-danger btn-xs" onclick="excluirP(\''+p.id+'\')">🗑</button></td></tr>').join('')+'</tbody></table></div>';
+  if(!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto. Adicione ou importe .txt (um por linha).</div></div>';return;}
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+(S.produtos||[]).map((p,i)=>'<tr><td style="color:var(--cinza3);font-size:11px;font-family:\'DM Mono\',monospace">'+String(i+1).padStart(2,'0')+'</td><td class="pn">'+p.nome+'</td><td style="font-size:11px;color:var(--cinza4);font-family:\'DM Mono\',monospace">'+(p.codigo||'—')+'</td><td style="text-align:center">'+p.qtd+'</td><td><span class="chip">'+p.unidade+'</span></td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-xs" onclick="abrirMP(\''+p.id+'\')">✏️</button><button class="btn btn-danger btn-xs" onclick="excluirP(\''+p.id+'\')">🗑</button></td></tr>').join('')+'</tbody></table></div>';
 }
 
 async function importarCSV(e){
@@ -477,7 +477,7 @@ async function importarCSV(e){
     for(const l of linhas){
       const p=l.split(/[,;\t]/);let nome,codigo='';
       if(p.length>=2){codigo=p[0].trim();nome=p[1].trim();}else nome=p[0].trim();
-      if(nome&&!S.produtos.find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
+      if(nome&&!(S.produtos||[]).find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
         const obj={id:uid(),nome,codigo,unidade:'CX',qtd:1};
         S.produtos.push(obj);await saveP(obj);added++;
       }
@@ -489,13 +489,13 @@ async function importarCSV(e){
 // ══ COTACAO ══
 function renderCot(){
   const upEl=document.getElementById('upload-forn'),tabEl=document.getElementById('tab-cot'),avEl=document.getElementById('av');
-  if(!S.fornecedores.length||!S.produtos.length){upEl.innerHTML='';tabEl.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Cadastre fornecedores e produtos primeiro.</div></div>';avEl.innerHTML='';return;}
+  if(!(S.fornecedores||[]).length||!(S.produtos||[]).length){upEl.innerHTML='';tabEl.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Cadastre fornecedores e produtos primeiro.</div></div>';avEl.innerHTML='';return;}
   let alertas=[];
-  S.fornecedores.forEach(function(f){S.produtos.forEach(function(p){var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};if(c.validade){if(vencido(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco VENCIDO ('+c.validade+')');else if(proximo(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);}});});
+  (S.fornecedores||[]).forEach(function(f){(S.produtos||[]).forEach(function(p){var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};if(c.validade){if(vencido(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco VENCIDO ('+c.validade+')');else if(proximo(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);}});});
   avEl.innerHTML=alertas.map(function(a){return'<div class="av-box">⏰ '+a+'</div>';}).join('');
-  upEl.innerHTML=S.fornecedores.map(f=>'<button class="btn btn-outline btn-sm" onclick="abrirUpload(\''+f.id+'\')">📄 PDF/IMG — '+f.nome+'</button>').join('');
-  function melhor(pid){var c=S.cotacoes[pid]||{};var min=Infinity,mf=null;S.fornecedores.forEach(f=>{var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return mf;}
-  tabEl.innerHTML='<table><thead><tr><th>Produto</th><th>Qtd</th>'+S.fornecedores.map(f=>'<th class="fh" colspan="4">'+f.nome+'</th>').join('')+'</tr><tr><th></th><th></th>'+S.fornecedores.map(()=>'<th class="fh" style="font-size:9px">Preco R$</th><th class="fh" style="font-size:9px">Prazo</th><th class="fh" style="font-size:9px">Desc.%</th><th class="fh" style="font-size:9px">Validade</th>').join('')+'</tr></thead><tbody>'+S.produtos.map(p=>{var mf=melhor(p.id);return'<tr><td class="pn">'+p.nome+'</td><td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:11px">'+p.qtd+'</td>'+S.fornecedores.map(f=>{var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};var im=mf===f.id;var venc=vencido(c.validade);var prox=proximo(c.validade);return'<td class="pc '+(im?'mp':'')+'"><input type="number" min="0" step="0.01" value="'+(c.preco||'')+'" placeholder="0,00" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'preco\',this.value)"></td><td class="pz"><input type="text" value="'+(c.prazo||'')+'" placeholder="'+(S.fornecedores.find(x=>x.id===f.id)||{}).prazo+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'prazo\',this.value)"></td><td class="dc"><input type="number" min="0" max="100" step="0.1" value="'+(c.desconto||'')+'" placeholder="0" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'desconto\',this.value)"></td><td class="vd"><input type="date" value="'+(c.validade||'')+'" style="'+(venc?'border-color:var(--erro);color:var(--erro)':prox?'border-color:var(--alerta);color:#92400E':'')+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'validade\',this.value)"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
+  upEl.innerHTML=(S.fornecedores||[]).map(f=>'<button class="btn btn-outline btn-sm" onclick="abrirUpload(\''+f.id+'\')">📄 PDF/IMG — '+f.nome+'</button>').join('');
+  function melhor(pid){var c=S.cotacoes[pid]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(f=>{var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return mf;}
+  tabEl.innerHTML='<table><thead><tr><th>Produto</th><th>Qtd</th>'+(S.fornecedores||[]).map(f=>'<th class="fh" colspan="4">'+f.nome+'</th>').join('')+'</tr><tr><th></th><th></th>'+(S.fornecedores||[]).map(()=>'<th class="fh" style="font-size:9px">Preco R$</th><th class="fh" style="font-size:9px">Prazo</th><th class="fh" style="font-size:9px">Desc.%</th><th class="fh" style="font-size:9px">Validade</th>').join('')+'</tr></thead><tbody>'+(S.produtos||[]).map(p=>{var mf=melhor(p.id);return'<tr><td class="pn">'+p.nome+'</td><td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:11px">'+p.qtd+'</td>'+(S.fornecedores||[]).map(f=>{var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};var im=mf===f.id;var venc=vencido(c.validade);var prox=proximo(c.validade);return'<td class="pc '+(im?'mp':'')+'"><input type="number" min="0" step="0.01" value="'+(c.preco||'')+'" placeholder="0,00" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'preco\',this.value)"></td><td class="pz"><input type="text" value="'+(c.prazo||'')+'" placeholder="'+((S.fornecedores||[]).find(x=>x.id===f.id)||{}).prazo+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'prazo\',this.value)"></td><td class="dc"><input type="number" min="0" max="100" step="0.1" value="'+(c.desconto||'')+'" placeholder="0" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'desconto\',this.value)"></td><td class="vd"><input type="date" value="'+(c.validade||'')+'" style="'+(venc?'border-color:var(--erro);color:var(--erro)':prox?'border-color:var(--alerta);color:#92400E':'')+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'validade\',this.value)"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
 }
 
 let saveTimer={};
@@ -512,15 +512,15 @@ function setC(pid,fid,k,v){
   },800);
   // update alerts
   let alertas=[];
-  S.fornecedores.forEach(function(f){S.produtos.forEach(function(p){var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};if(c.validade){if(vencido(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco VENCIDO');else if(proximo(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);}});});
+  (S.fornecedores||[]).forEach(function(f){(S.produtos||[]).forEach(function(p){var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};if(c.validade){if(vencido(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco VENCIDO');else if(proximo(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);}});});
   document.getElementById('av').innerHTML=alertas.map(function(a){return'<div class="av-box">⏰ '+a+'</div>';}).join('');
 }
 
 function atuDest(){
-  S.produtos.forEach(p=>{
+  (S.produtos||[]).forEach(p=>{
     var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;
-    S.fornecedores.forEach(f=>{var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});
-    S.fornecedores.forEach(f=>{
+    (S.fornecedores||[]).forEach(f=>{var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});
+    (S.fornecedores||[]).forEach(f=>{
       var rows=document.querySelectorAll('#tab-cot tbody tr');
       var ri=S.produtos.findIndex(x=>x.id===p.id);
       var ci=S.fornecedores.findIndex(x=>x.id===f.id);
@@ -624,31 +624,31 @@ if(dz){dz.addEventListener('dragover',function(e){e.preventDefault();dz.style.ba
 // ══ PLACAR ══
 function calcularPlacar(){
   var el=document.getElementById('placar');
-  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML='<div class="empty"><div class="ei">🏆</div><div class="et">Cadastre dados primeiro.</div></div>';return;}
-  var sc={},tot={};S.fornecedores.forEach(function(f){sc[f.id]=0;tot[f.id]=0;});var com=0;
-  S.produtos.forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
+  if(!(S.fornecedores||[]).length||!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">🏆</div><div class="et">Cadastre dados primeiro.</div></div>';return;}
+  var sc={},tot={};(S.fornecedores||[]).forEach(function(f){sc[f.id]=0;tot[f.id]=0;});var com=0;
+  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
   if(!com){el.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
   var mx=Math.max(...Object.values(sc));
-  var sorted=[...S.fornecedores].sort(function(a,b){return sc[b.id]-sc[a.id];});
-  el.innerHTML='<p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Baseado em <strong>'+com+'</strong> produto(s).</p><div class="placar-grid">'+sorted.map(function(f){var ic=sc[f.id]===mx&&mx>0;return'<div class="placar-card '+(ic?'cx':'')+'"><div class="pn2">'+f.nome+'</div><div class="pnum">'+sc[f.id]+'</div><div class="plbl">item(s) mais barato(s)</div>'+(tot[f.id]>0?'<div style="margin-top:5px;font-size:11px;color:var(--cinza4)">Total: '+moeda(tot[f.id])+'</div>':'')+'</div>';}).join('')+'</div><div class="card" style="margin-top:14px;padding:14px"><div class="card-title">Resumo por Produto</div><div class="table-wrap"><table><thead><tr><th>Produto</th>'+S.fornecedores.map(function(f){return'<th style="text-align:center">'+f.nome+'</th>';}).join('')+'<th>Vencedor</th></tr></thead><tbody>'+S.produtos.map(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return'<tr><td class="pn">'+p.nome+'</td>'+S.fornecedores.map(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);var im=mf===f.id;return'<td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:12px;'+(im?'color:var(--verde);font-weight:600':'')+'">'+((!isNaN(v)&&v>0)?moeda(v):'—')+'</td>';}).join('')+'<td style="text-align:center">'+(mf?'<span class="wb">'+(S.fornecedores.find(function(f){return f.id===mf;})||{}).nome+'</span>':'—')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
+  var sorted=[...(S.fornecedores||[])].sort(function(a,b){return sc[b.id]-sc[a.id];});
+  el.innerHTML='<p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Baseado em <strong>'+com+'</strong> produto(s).</p><div class="placar-grid">'+sorted.map(function(f){var ic=sc[f.id]===mx&&mx>0;return'<div class="placar-card '+(ic?'cx':'')+'"><div class="pn2">'+f.nome+'</div><div class="pnum">'+sc[f.id]+'</div><div class="plbl">item(s) mais barato(s)</div>'+(tot[f.id]>0?'<div style="margin-top:5px;font-size:11px;color:var(--cinza4)">Total: '+moeda(tot[f.id])+'</div>':'')+'</div>';}).join('')+'</div><div class="card" style="margin-top:14px;padding:14px"><div class="card-title">Resumo por Produto</div><div class="table-wrap"><table><thead><tr><th>Produto</th>'+(S.fornecedores||[]).map(function(f){return'<th style="text-align:center">'+f.nome+'</th>';}).join('')+'<th>Vencedor</th></tr></thead><tbody>'+(S.produtos||[]).map(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return'<tr><td class="pn">'+p.nome+'</td>'+(S.fornecedores||[]).map(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);var im=mf===f.id;return'<td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:12px;'+(im?'color:var(--verde);font-weight:600':'')+'">'+((!isNaN(v)&&v>0)?moeda(v):'—')+'</td>';}).join('')+'<td style="text-align:center">'+(mf?'<span class="wb">'+((S.fornecedores||[]).find(function(f){return f.id===mf;})||{}).nome+'</span>':'—')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
 }
 
 // ══ COMBO IDEAL ══
 function calcularCombo(){
   var el=document.getElementById('combo');
-  if(!S.fornecedores.length||!S.produtos.length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Cadastre dados e preencha os precos.</div></div>';return;}
-  var totalIdeal=0,totF={};S.fornecedores.forEach(function(f){totF[f.id]=0;});var linhas=[];
-  S.produtos.forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p:p,mf:mf,min:min});}});
+  if(!(S.fornecedores||[]).length||!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Cadastre dados e preencha os precos.</div></div>';return;}
+  var totalIdeal=0,totF={};(S.fornecedores||[]).forEach(function(f){totF[f.id]=0;});var linhas=[];
+  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p:p,mf:mf,min:min});}});
   if(!linhas.length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
-  var melhorUnico=Math.min(...S.fornecedores.map(function(f){return totF[f.id];}).filter(function(v){return v>0;}));
+  var melhorUnico=Math.min(...(S.fornecedores||[]).map(function(f){return totF[f.id];}).filter(function(v){return v>0;}));
   var eco=melhorUnico-totalIdeal;
-  el.innerHTML='<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div>':'')+'</div>'+linhas.map(function(x){var f=S.fornecedores.find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('');
+  el.innerHTML='<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div>':'')+'</div>'+linhas.map(function(x){var f=(S.fornecedores||[]).find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('');
 }
 
 // ══ WHATSAPP ══
 function enviarWhatsApp(){
-  if(!S.fornecedores.length){toast('Cadastre fornecedores primeiro');return;}
-  if(!S.produtos.length){toast('Cadastre produtos primeiro');return;}
+  if(!(S.fornecedores||[]).length){toast('Cadastre fornecedores primeiro');return;}
+  if(!(S.produtos||[]).length){toast('Cadastre produtos primeiro');return;}
   var el=document.getElementById('wpplist');
   var comTel=(S.fornecedores||[]).filter(function(f){return f.contato;});
   if(!comTel.length){
@@ -670,9 +670,9 @@ function enviarWhatsApp(){
   abrirM('mwpp');
 }
 function abrirWpp(fid,num){
-  var f=S.fornecedores.find(function(x){return x.id===fid;});
+  var f=(S.fornecedores||[]).find(function(x){return x.id===fid;});
   var tel=num===2?(f.contato2||f.contato):f.contato;
-  var lista=S.produtos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ('+p.codigo+')':'')+' — Qtd: '+p.qtd+' '+p.unidade;}).join('\n');
+  var lista=(S.produtos||[]).map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ('+p.codigo+')':'')+' — Qtd: '+p.qtd+' '+p.unidade;}).join('\n');
   var txt='Ola, '+f.nome+'!\n\nSeguem os produtos para cotacao da *MS Farma*:\n\n'+lista+'\n\nAguardo o orcamento. Obrigada!';
   var numero=tel.replace(/\D/g,'');
   window.open('https://wa.me/55'+numero+'?text='+encodeURIComponent(txt),'_blank');
@@ -681,7 +681,7 @@ function abrirWpp(fid,num){
 
 // ══ HISTORICO ══
 async function salvarHistorico(){
-  if(!S.produtos.length||!S.fornecedores.length){toast('Nada para salvar');return;}
+  if(!(S.produtos||[]).length||!(S.fornecedores||[]).length){toast('Nada para salvar');return;}
   var nome=prompt('Nome desta cotacao:','Cotacao '+new Date().toLocaleDateString('pt-BR'));
   if(!nome)return;
   var obj={id:uid(),nome:nome,data:hoje()};
@@ -698,7 +698,7 @@ async function excluirHist(id){
 function renderHist(){
   var el=document.getElementById('hist');
   if(!S.historico.length){el.innerHTML='<div class="empty"><div class="ei">📂</div><div class="et">Nenhuma cotacao salva.<br>Clique em "Salvar cotacao atual".</div></div>';document.getElementById('card-graf').style.display='none';return;}
-  el.innerHTML=S.historico.map(function(h){return'<div class="hi"><div class="hh"><div><div class="hn">'+h.nome+'</div><div class="hd">'+(h.data||'')+'</div></div><div style="display:flex;gap:5px"><button class="btn btn-danger btn-xs" onclick="excluirHist(\''+h.id+'\')">🗑</button></div></div></div>';}).join('');
+  el.innerHTML=(S.historico||[]).map(function(h){return'<div class="hi"><div class="hh"><div><div class="hn">'+h.nome+'</div><div class="hd">'+(h.data||'')+'</div></div><div style="display:flex;gap:5px"><button class="btn btn-danger btn-xs" onclick="excluirHist(\''+h.id+'\')">🗑</button></div></div></div>';}).join('');
   document.getElementById('card-graf').style.display='block';
   var sel=document.getElementById('sel-prod');
   var todos=[...new Map(S.historico.flatMap(function(h){return h.produtos||[];}).map(function(p){return[p.nome,p];}) ).values()];
@@ -714,16 +714,16 @@ function renderGrafico(){
   var fmap=new Map();
   S.historico.forEach(function(h){(h.fornecedores||[]).forEach(function(f){fmap.set(f.id,f.nome);});});
   var fids=[...fmap.keys()];
-  var labels=S.historico.map(function(h){return h.nome;}).reverse();
-  var datasets=fids.map(function(fid,i){return{label:fmap.get(fid),data:S.historico.map(function(h){var p=(h.produtos||[]).find(function(x){return x.nome===nome;});if(!p)return null;var c=(h.cotacoes||{});var fc=(c[p.id]&&c[p.id][fid]);var v=fc?parseFloat(fc.preco):null;return isNaN(v)?null:v;}).reverse(),borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,pointRadius:4,fill:false};});
+  var labels=(S.historico||[]).map(function(h){return h.nome;}).reverse();
+  var datasets=fids.map(function(fid,i){return{label:fmap.get(fid),data:(S.historico||[]).map(function(h){var p=(h.produtos||[]).find(function(x){return x.nome===nome;});if(!p)return null;var c=(h.cotacoes||{});var fc=(c[p.id]&&c[p.id][fid]);var v=fc?parseFloat(fc.preco):null;return isNaN(v)?null:v;}).reverse(),borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,pointRadius:4,fill:false};});
   chartIns=new Chart(ctx,{type:'line',data:{labels:labels,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11}}}},scales:{y:{ticks:{callback:function(v){return moeda(v);},font:{family:'DM Mono',size:10}},grid:{color:'#E8ECEB'}},x:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false}}}}});
 }
 
 // ══ EXPORTAR ══
 function exportarExcel(){
-  if(!S.produtos.length||!S.fornecedores.length){toast('Nada para exportar');return;}
-  var csv='Produto;Qtd;Un;'+S.fornecedores.map(function(f){return f.nome+' - Preco;'+f.nome+' - Prazo;'+f.nome+' - Desc%;'+f.nome+' - Validade';}).join(';')+';Vencedor\n';
-  S.produtos.forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;S.fornecedores.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});csv+='"'+p.nome+'";'+p.qtd+';'+p.unidade+';'+S.fornecedores.map(function(f){var ct=(c[f.id])||{};return(ct.preco||'')+';'+(ct.prazo||'')+';'+(ct.desconto||'')+';'+(ct.validade||'');}).join(';')+';'+(mf?(S.fornecedores.find(function(f){return f.id===mf;})||{}).nome:'')+'\n';});
+  if(!(S.produtos||[]).length||!(S.fornecedores||[]).length){toast('Nada para exportar');return;}
+  var csv='Produto;Qtd;Un;'+(S.fornecedores||[]).map(function(f){return f.nome+' - Preco;'+f.nome+' - Prazo;'+f.nome+' - Desc%;'+f.nome+' - Validade';}).join(';')+';Vencedor\n';
+  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});csv+='"'+p.nome+'";'+p.qtd+';'+p.unidade+';'+(S.fornecedores||[]).map(function(f){var ct=(c[f.id])||{};return(ct.preco||'')+';'+(ct.prazo||'')+';'+(ct.desconto||'')+';'+(ct.validade||'');}).join(';')+';'+(mf?((S.fornecedores||[]).find(function(f){return f.id===mf;})||{}).nome:'')+'\n';});
   var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cotacao_msfarma_'+hoje()+'.csv';a.click();toast('Exportado!');
 }
