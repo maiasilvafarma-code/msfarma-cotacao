@@ -537,18 +537,64 @@ function abrirUpload(fid){
   document.getElementById('pdfcancel').style.display='flex';
   document.getElementById('ipdf').value='';abrirM('mpdf');
 }
+async function comprimirImagem(file) {
+  return new Promise(function(resolve) {
+    if (!file.type.startsWith('image/')) { 
+      var r=new FileReader();r.onload=function(){resolve(r.result.split(',')[1]);};r.readAsDataURL(file);return;
+    }
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 1200, maxH = 1600;
+      var w = img.width, h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      if (h > maxH) { w = w * maxH / h; h = maxH; }
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var compressed = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+      URL.revokeObjectURL(url);
+      resolve(compressed);
+    };
+    img.src = url;
+  });
+}
+
 async function processarArquivo(e){
   var file=e.target.files[0];if(!file)return;
   var stEl=document.getElementById('pdfstatus'),pvEl=document.getElementById('pdfpreview');
   document.getElementById('pdfcancel').style.display='none';
-  stEl.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span> Lendo com IA... aguarde</div>';
   pvEl.style.display='none';
+
+  // Progress steps
+  var steps = ['📂 Preparando arquivo...', '🗜️ Otimizando imagem...', '📡 Enviando para IA...', '🤖 IA analisando preços...'];
+  var stepIdx = 0;
+  function showStep(i) {
+    stEl.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span><b>'+steps[i]+'</b></div>'
+      +'<div style="background:var(--cinza2);border-radius:4px;height:4px;overflow:hidden"><div style="background:var(--verde);height:4px;border-radius:4px;transition:width .5s;width:'+Math.round((i+1)/steps.length*100)+'%"></div></div>'
+      +'<div style="font-size:11px;color:var(--cinza4)">Passo '+(i+1)+' de '+steps.length+'</div>'
+      +'</div>';
+  }
+  showStep(0);
+
   var isImg=file.type.startsWith('image/');
-  var base64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=function(){rej(new Error('Erro'));};r.readAsDataURL(file);});
+  
+  showStep(1);
+  var base64;
+  if(isImg) {
+    base64 = await comprimirImagem(file);
+  } else {
+    base64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=function(){rej(new Error('Erro'));};r.readAsDataURL(file);});
+  }
+  showStep(2);
+  await new Promise(r=>setTimeout(r,100)); // allow UI to update
   var lista=S.produtos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ['+p.codigo+']':'');}).join('\n');
   var prompt='Analise este orcamento farmaceutico. Minha lista:\n'+lista+'\n\nExtraia os precos. Responda APENAS com JSON:\n{"itens":[{"nomePDF":"","preco":0,"prazo":null,"desconto":null,"validade":null,"idxMinha":1}]}\nvalidade no formato YYYY-MM-DD ou null. Sem texto extra.';
   try{
     var block=isImg?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
+    showStep(3);
     var resp=await fetch('https://aydzadpymxkcygquixgv.supabase.co/functions/v1/clever-worker',{method:'POST',headers:{'Content-Type':'application/json','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5ZHphZHB5bXhrY3lncXVpeGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDQxMzQsImV4cCI6MjA5NjA4MDEzNH0.LiBxr2Eu6QAPXSLJ93sDLxsaKZIKR_4XFVtbSMhkX0s'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:block}]})});
     var data=await resp.json();
     var txt=data.content.map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim();
