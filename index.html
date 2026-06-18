@@ -531,6 +531,7 @@ function atuDest(){
 
 // ══ PDF/IMG IA ══
 function abrirUpload(fid){
+  try{
   pdfFornId=fid;pdfDados=[];
   var f=(S.fornecedores||[]).find(function(x){return x.id===fid;});
   if(!f){toast('Recarregue a pagina e tente novamente');return;}
@@ -539,6 +540,11 @@ function abrirUpload(fid){
   document.getElementById('pdfpreview').style.display='none';
   document.getElementById('pdfcancel').style.display='flex';
   document.getElementById('ipdf').value='';abrirM('mpdf');
+  }catch(err){
+    var stEl=document.getElementById('pdfstatus');
+    if(stEl) stEl.innerHTML='<span style="color:red">Debug: '+err.message+' | stack: '+err.stack.split('\n')[1]+'</span>';
+    abrirM('mpdf');
+  }
 }
 
 async function comprimirImagem(file) {
@@ -566,6 +572,7 @@ async function comprimirImagem(file) {
 }
 
 async function processarArquivo(e){
+  if(!e||!e.target||!e.target.files||!e.target.files[0])return;
   var file=e.target.files[0];if(!file)return;
   var stEl=document.getElementById('pdfstatus'),pvEl=document.getElementById('pdfpreview');
   document.getElementById('pdfcancel').style.display='none';
