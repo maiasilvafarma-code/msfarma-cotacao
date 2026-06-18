@@ -531,7 +531,7 @@ function atuDest(){
 
 // ══ PDF/IMG IA ══
 function abrirUpload(fid){
-  pdfFornId=fid;pdfDados=[];var f=S.fornecedores.find(x=>x.id===fid);
+  pdfFornId=fid;pdfDados=[];var f=(S.fornecedores||[]).find(x=>x.id===fid);
   document.getElementById('pdfnome').textContent=f.nome;
   document.getElementById('pdfstatus').textContent='';
   document.getElementById('pdfpreview').style.display='none';
@@ -591,7 +591,7 @@ async function processarArquivo(e){
   }
   showStep(2);
   await new Promise(r=>setTimeout(r,100)); // allow UI to update
-  var lista=S.produtos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ['+p.codigo+']':'');}).join('\n');
+  var lista=(S.produtos||[]).map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ['+p.codigo+']':'');}).join('\n');
   var prompt='Analise este orcamento farmaceutico. Minha lista:\n'+lista+'\n\nExtraia os precos. Responda APENAS com JSON:\n{"itens":[{"nomePDF":"","preco":0,"prazo":null,"desconto":null,"validade":null,"idxMinha":1}]}\nvalidade no formato YYYY-MM-DD ou null. Sem texto extra.';
   try{
     var block=isImg?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
@@ -648,7 +648,7 @@ function enviarWhatsApp(){
   if(!S.fornecedores.length){toast('Cadastre fornecedores primeiro');return;}
   if(!S.produtos.length){toast('Cadastre produtos primeiro');return;}
   var el=document.getElementById('wpplist');
-  var comTel=S.fornecedores.filter(function(f){return f.contato;});
+  var comTel=(S.fornecedores||[]).filter(function(f){return f.contato;});
   if(!comTel.length){
     el.innerHTML='<p style="font-size:12px;color:var(--cinza4);padding:10px 0">Nenhum fornecedor com WhatsApp.</p>';
   } else {
