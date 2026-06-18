@@ -540,9 +540,10 @@ function abrirUpload(fid){
   document.getElementById('pdfcancel').style.display='flex';
   document.getElementById('ipdf').value='';abrirM('mpdf');
 }
+
 async function comprimirImagem(file) {
   return new Promise(function(resolve) {
-    if (!file.type.startsWith('image/')) { 
+    if (!file.type.startsWith('image/')) {
       var r=new FileReader();r.onload=function(){resolve(r.result.split(',')[1]);};r.readAsDataURL(file);return;
     }
     var img = new Image();
@@ -551,8 +552,8 @@ async function comprimirImagem(file) {
       var canvas = document.createElement('canvas');
       var maxW = 1200, maxH = 1600;
       var w = img.width, h = img.height;
-      if (w > maxW) { h = h * maxW / w; w = maxW; }
-      if (h > maxH) { w = w * maxH / h; h = maxH; }
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
       canvas.width = w; canvas.height = h;
       var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
@@ -569,49 +570,35 @@ async function processarArquivo(e){
   var stEl=document.getElementById('pdfstatus'),pvEl=document.getElementById('pdfpreview');
   document.getElementById('pdfcancel').style.display='none';
   pvEl.style.display='none';
-
-  // Progress steps
-  var steps = ['📂 Preparando arquivo...', '🗜 Otimizando imagem...', '📡 Enviando para IA...', '🤖 IA analisando preços...'];
-  var stepIdx = 0;
-  function showStep(i) {
-    stEl.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'
-      +'<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span><b>'+steps[i]+'</b></div>'
-      +'<div style="background:var(--cinza2);border-radius:4px;height:4px;overflow:hidden"><div style="background:var(--verde);height:4px;border-radius:4px;transition:width .5s;width:'+Math.round((i+1)/steps.length*100)+'%"></div></div>'
-      +'<div style="font-size:11px;color:var(--cinza4)">Passo '+(i+1)+' de '+steps.length+'</div>'
-      +'</div>';
-  }
-  showStep(0);
-
+  stEl.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span class="ai-dot" style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span><b>Lendo com IA... aguarde</b></div>';
   var isImg=file.type.startsWith('image/');
-  
-  showStep(1);
   var base64;
-  if(isImg) {
+  if(isImg){
     base64 = await comprimirImagem(file);
   } else {
     base64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=function(){rej(new Error('Erro'));};r.readAsDataURL(file);});
   }
-  showStep(2);
-  await new Promise(r=>setTimeout(r,100)); // allow UI to update
   var lista=(S.produtos||[]).map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ['+p.codigo+']':'');}).join('\n');
   var prompt='Analise este orcamento farmaceutico. Minha lista:\n'+lista+'\n\nExtraia os precos. Responda APENAS com JSON:\n{"itens":[{"nomePDF":"","preco":0,"prazo":null,"desconto":null,"validade":null,"idxMinha":1}]}\nvalidade no formato YYYY-MM-DD ou null. Sem texto extra.';
   try{
-    var block=isImg?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
-    showStep(3);
+    var block=isImg
+      ?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]
+      :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
     var resp=await fetch('https://aydzadpymxkcygquixgv.supabase.co/functions/v1/clever-worker',{method:'POST',headers:{'Content-Type':'application/json','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5ZHphZHB5bXhrY3lncXVpeGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDQxMzQsImV4cCI6MjA5NjA4MDEzNH0.LiBxr2Eu6QAPXSLJ93sDLxsaKZIKR_4XFVtbSMhkX0s'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:block}]})});
     var data=await resp.json();
     var txt=data.content.map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim();
     var parsed=JSON.parse(txt);pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
     stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
-    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item){var m=item.idxMinha?S.produtos[item.idxMinha-1]:null;return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:\'DM Mono\',monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'—')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'—')+'</td><td style="text-align:center">'+(item.validade||'—')+'</td><td style="font-size:11px;color:var(--verde)">'+(m?'OK '+m.nome:'Nao mapeado')+'</td></tr>';}).join('')+'</tbody></table>';
+    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item){var m=item.idxMinha?(S.produtos||[])[item.idxMinha-1]:null;return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'--')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'--')+'</td><td style="text-align:center">'+(item.validade||'--')+'</td><td style="font-size:11px;color:var(--verde)">'+(m?'OK - '+m.nome:'Nao mapeado')+'</td></tr>';}).join('')+'</tbody></table>';
     pvEl.style.display='block';
   }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
 }
+
 async function aplicarPDF(){
   var ap=0;
   for(var item of pdfDados){
-    if(!item.idxMinha)continue;var prod=S.produtos[item.idxMinha-1];if(!prod)continue;
+    if(!item.idxMinha)continue;var prod=(S.produtos||[])[item.idxMinha-1];if(!prod)continue;
     var dados={preco:item.preco||'',prazo:item.prazo||'',desconto:item.desconto||'',validade:item.validade||''};
     await savePreco(prod.id,pdfFornId,dados);ap++;
   }
