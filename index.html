@@ -531,7 +531,9 @@ function atuDest(){
 
 // ══ PDF/IMG IA ══
 function abrirUpload(fid){
-  pdfFornId=fid;pdfDados=[];var f=(S.fornecedores||[]).find(x=>x.id===fid);
+  pdfFornId=fid;pdfDados=[];
+  var f=(S.fornecedores||[]).find(function(x){return x.id===fid;});
+  if(!f){toast('Recarregue a pagina e tente novamente');return;}
   document.getElementById('pdfnome').textContent=f.nome;
   document.getElementById('pdfstatus').textContent='';
   document.getElementById('pdfpreview').style.display='none';
