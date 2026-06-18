@@ -290,6 +290,12 @@ td.vd input{width:105px;font-size:12px;}
 <div id="toast"></div>
 
 <script>
+window.onerror = function(msg, src, line, col, err) {
+  var st = document.getElementById('pdfstatus');
+  if(st) st.innerHTML = '<span style="color:red">DEBUG: '+msg+' | line:'+line+' | '+src+'</span>';
+  console.error('onerror:', msg, src, line, col, err);
+  return false;
+};
 // ══ SUPABASE CONFIG ══
 const SB_URL = 'https://aydzadpymxkcygquixgv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5ZHphZHB5bXhrY3lncXVpeGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDQxMzQsImV4cCI6MjA5NjA4MDEzNH0.LiBxr2Eu6QAPXSLJ93sDLxsaKZIKR_4XFVtbSMhkX0s';
