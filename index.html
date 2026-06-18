@@ -218,8 +218,9 @@ td.vd input{width:105px;font-size:12px;}
     <input type="hidden" id="fid">
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
       <div class="form-group" style="grid-column:1/-1"><label>Nome *</label><input id="fnome" placeholder="ex: Distribuidora Alfa"></div>
-      <div class="form-group"><label>WhatsApp</label><input id="ftel" placeholder="(85) 99999-9999"></div>
-      <div class="form-group"><label>Prazo padrao</label><input id="fprazo" type="search" autocomplete="off" placeholder="ex: 30/60/90" style="appearance:none;-webkit-appearance:none;"></div>
+      <div class="form-group"><label>WhatsApp 1</label><input id="ftel" placeholder="(85) 99999-9999"></div>
+      <div class="form-group"><label>WhatsApp 2</label><input id="ftel2" placeholder="(85) 99999-9999"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Prazo padrao</label><input id="fprazo" type="search" autocomplete="off" placeholder="ex: 30/60/90" style="appearance:none;-webkit-appearance:none;"></div>
       <div class="form-group" style="grid-column:1/-1"><label>Observacao</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
@@ -355,7 +356,7 @@ async function carregarDados() {
 // ══ SAVE HELPERS ══
 async function saveF(obj) {
   setSyncStatus('sync');
-  try { await sbUpsert('cotacao_fornecedores',{id:obj.id,nome:obj.nome,contato:obj.contato||null,prazo:obj.prazo||null,obs:obj.obs||null}); setSyncStatus('ok'); }
+  try { await sbUpsert('cotacao_fornecedores',{id:obj.id,nome:obj.nome,contato:obj.contato||null,contato2:obj.contato2||null,prazo:obj.prazo||null,obs:obj.obs||null}); setSyncStatus('ok'); }
   catch(e){setSyncStatus('err');}
 }
 async function saveP(obj) {
@@ -414,14 +415,14 @@ function abrirTab(n,el){
 // ══ FORNECEDORES ══
 function abrirMF(id){
   document.getElementById('fid').value=id||'';
-  if(id){const f=S.fornecedores.find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';}
-  else{['fnome','ftel','fprazo','fobs'].forEach(x=>document.getElementById(x).value='');}
+  if(id){const f=S.fornecedores.find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('ftel2').value=f.contato2||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';}
+  else{['fnome','ftel','ftel2','fprazo','fobs'].forEach(x=>document.getElementById(x).value='');}
   abrirM('mforn');setTimeout(()=>document.getElementById('fnome').focus(),80);
 }
 async function salvarF(){
   const nome=document.getElementById('fnome').value.trim();if(!nome){toast('Informe o nome');return;}
   const id=document.getElementById('fid').value||uid();
-  const obj={id,nome,contato:document.getElementById('ftel').value.trim(),prazo:document.getElementById('fprazo').value,obs:document.getElementById('fobs').value.trim()};
+  const obj={id,nome,contato:document.getElementById('ftel').value.trim(),contato2:document.getElementById('ftel2').value.trim(),prazo:document.getElementById('fprazo').value,obs:document.getElementById('fobs').value.trim()};
   const i=S.fornecedores.findIndex(x=>x.id===id);if(i>=0)S.fornecedores[i]=obj;else S.fornecedores.push(obj);
   renderForn();fecharM('mforn');
   await saveF(obj);toast('Fornecedor salvo na nuvem');
@@ -437,7 +438,7 @@ async function excluirF(id){
 function renderForn(){
   const el=document.getElementById('lista-forn');
   if(!S.fornecedores.length){el.innerHTML='<div class="empty"><div class="ei">🏪</div><div class="et">Nenhum fornecedor. Clique em "+ Adicionar".</div></div>';return;}
-  el.innerHTML='<div class="forn-grid">'+S.fornecedores.map(f=>'<div class="forn-card"><div class="fn">'+f.nome+'</div>'+(f.contato?'<div class="fd">📞 '+f.contato+'</div>':'')+(f.prazo?'<div class="fd">📅 '+f.prazo+' dias</div>':'')+(f.obs?'<div class="fd">💬 '+f.obs+'</div>':'')+'<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF(\''+f.id+'\')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF(\''+f.id+'\')">🗑</button></div></div>').join('')+'</div>';
+  el.innerHTML='<div class="forn-grid">'+S.fornecedores.map(f=>'<div class="forn-card"><div class="fn">'+f.nome+'</div>'+(f.contato?'<div class="fd">📞 '+f.contato+(f.contato2?' / '+f.contato2:'')+'</div>':'')+(f.prazo?'<div class="fd">📅 '+f.prazo+' dias</div>':'')+(f.obs?'<div class="fd">💬 '+f.obs+'</div>':'')+'<div class="fa"><button class="btn btn-outline btn-xs" onclick="abrirMF(\''+f.id+'\')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="excluirF(\''+f.id+'\')">🗑</button></div></div>').join('')+'</div>';
 }
 
 // ══ PRODUTOS ══
@@ -648,15 +649,31 @@ function enviarWhatsApp(){
   if(!S.produtos.length){toast('Cadastre produtos primeiro');return;}
   var el=document.getElementById('wpplist');
   var comTel=S.fornecedores.filter(function(f){return f.contato;});
-  el.innerHTML=comTel.map(function(f){return'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza2)"><div><div style="font-weight:600">'+f.nome+'</div><div style="font-size:12px;color:var(--cinza4)">'+f.contato+'</div></div><button class="btn btn-green btn-sm" onclick="abrirWpp(\''+f.id+'\')">📲 Enviar</button></div>';}).join('')+(!comTel.length?'<p style="font-size:12px;color:var(--cinza4);padding:10px 0">Nenhum fornecedor com WhatsApp.</p>':'');
+  if(!comTel.length){
+    el.innerHTML='<p style="font-size:12px;color:var(--cinza4);padding:10px 0">Nenhum fornecedor com WhatsApp.</p>';
+  } else {
+    el.innerHTML=comTel.map(function(f){
+      var btns='';
+      if(f.contato2){
+        btns='<div style="display:flex;gap:4px"><button class="btn btn-green btn-sm" onclick="abrirWpp(\''+f.id+'\',1)">📲 Nº1</button><button class="btn btn-green btn-sm" onclick="abrirWpp(\''+f.id+'\',2)">📲 Nº2</button></div>';
+      } else {
+        btns='<button class="btn btn-green btn-sm" onclick="abrirWpp(\''+f.id+'\',1)">📲 Enviar</button>';
+      }
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza2)">'
+        +'<div><div style="font-weight:600">'+f.nome+'</div>'
+        +'<div style="font-size:12px;color:var(--cinza4)">'+f.contato+(f.contato2?' / '+f.contato2:'')+'</div></div>'
+        +btns+'</div>';
+    }).join('');
+  }
   abrirM('mwpp');
 }
-function abrirWpp(fid){
+function abrirWpp(fid,num){
   var f=S.fornecedores.find(function(x){return x.id===fid;});
+  var tel=num===2?(f.contato2||f.contato):f.contato;
   var lista=S.produtos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ('+p.codigo+')':'')+' — Qtd: '+p.qtd+' '+p.unidade;}).join('\n');
   var txt='Ola, '+f.nome+'!\n\nSeguem os produtos para cotacao da *MS Farma*:\n\n'+lista+'\n\nAguardo o orcamento. Obrigada!';
-  var num=f.contato.replace(/\D/g,'');
-  window.open('https://wa.me/55'+num+'?text='+encodeURIComponent(txt),'_blank');
+  var numero=tel.replace(/\D/g,'');
+  window.open('https://wa.me/55'+numero+'?text='+encodeURIComponent(txt),'_blank');
   fecharM('mwpp');toast('Abrindo WhatsApp...');
 }
 
