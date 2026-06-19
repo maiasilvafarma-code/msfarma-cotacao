@@ -694,7 +694,7 @@ async function processarArquivo(e){
     pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
     stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
-    var allProds2=todosProdutos||S.produtos||[];
+    var allProds2=S.produtos||[];
     var optsHtml='<option value="">-- Selecione --</option>'+allProds2.map(function(p,i){return'<option value="'+i+'">'+p.nome+'</option>';}).join('');
     document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
       var m=item.idxMinha?allProds2[item.idxMinha-1]:null;
@@ -710,10 +710,10 @@ async function processarArquivo(e){
 
 async function aplicarPDF(){
   var ap=0;
-  var allProds=todosProdutos||S.produtos||[];
+  var allProds=S.produtos||[];
   for(var i=0;i<pdfDados.length;i++){
     var item=pdfDados[i];
-    var sel=document.getElementById('sel_'+i);
+    var sel=document.getElementById('psel_'+i);
     var prod=null;
     if(sel&&sel.value!=='') prod=allProds[parseInt(sel.value)];
     if(!prod)continue;
