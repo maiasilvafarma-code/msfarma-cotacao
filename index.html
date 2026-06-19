@@ -701,7 +701,22 @@ async function processarArquivo(e){
 async function aplicarPDF(){
   var ap=0;
   for(var item of pdfDados){
-    if(!item.idxMinha)continue;var prod=(S.produtos||[])[item.idxMinha-1];if(!prod)continue;
+    var prod=null;
+    // Tenta pelo índice primeiro
+    if(item.idxMinha) prod=(S.produtos||[])[item.idxMinha-1];
+    // Se não achou, tenta pelo código de barras
+    if(!prod && item.codigoBarras){
+      prod=(S.produtos||[]).find(function(p){return p.codigo&&p.codigo.replace(/\D/g,'')===(item.codigoBarras||'').replace(/\D/g,'');});
+    }
+    // Se não achou, tenta pelo nome parcial
+    if(!prod && item.nomeProduto){
+      var nomePDF=(item.nomeProduto||'').toLowerCase().replace(/[^a-z0-9]/g,' ').trim();
+      prod=(S.produtos||[]).find(function(p){
+        var nomeP=(p.nome||'').toLowerCase().replace(/[^a-z0-9]/g,' ').trim();
+        return nomeP===nomePDF || nomeP.indexOf(nomePDF.substring(0,15))>=0 || nomePDF.indexOf(nomeP.substring(0,15))>=0;
+      });
+    }
+    if(!prod)continue;
     var dados={preco:item.preco||'',prazo:item.prazo||'',desconto:item.desconto||'',validade:item.validade||''};
     await savePreco(prod.id,pdfFornId,dados);ap++;
   }
