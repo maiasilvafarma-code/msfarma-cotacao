@@ -597,7 +597,7 @@ async function processarArquivo(e){
     var block=isImg
       ?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]
       :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}];
-    var resp=await fetch('https://aydzadpymxkcygquixgv.supabase.co/functions/v1/clever-worker',{method:'POST',headers:{'Content-Type':'application/json','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5ZHphZHB5bXhrY3lncXVpeGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDQxMzQsImV4cCI6MjA5NjA4MDEzNH0.LiBxr2Eu6QAPXSLJ93sDLxsaKZIKR_4XFVtbSMhkX0s','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5ZHphZHB5bXhrY3lncXVpeGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDQxMzQsImV4cCI6MjA5NjA4MDEzNH0.LiBxr2Eu6QAPXSLJ93sDLxsaKZIKR_4XFVtbSMhkX0s'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:block}]})});
+    var resp=await fetch('https://aydzadpymxkcygquixgv.supabase.co/functions/v1/clever-worker',{method:'POST',headers:{'Content-Type':'application/json','apikey':'sb_publishable_VYdgoTKL9nVBIkmAKs2Uhw_NkcPx0e5','Authorization':'Bearer sb_publishable_VYdgoTKL9nVBIkmAKs2Uhw_NkcPx0e5'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:block}]})});
     var data=await resp.json();
     if(!data.content||!Array.isArray(data.content)){
       var errMsg = data.error||data.message||(data.error_code?JSON.stringify(data):'Resposta inesperada da IA');
