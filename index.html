@@ -696,7 +696,7 @@ async function processarArquivo(e){
     stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
     var allProds2=todosProdutos||S.produtos||[];
     var optsHtml='<option value="">-- Selecione --</option>'+allProds2.map(function(p,i){return'<option value="'+i+'">'+p.nome+'</option>';}).join('');
-    getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
+    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
       var m=item.idxMinha?allProds2[item.idxMinha-1]:null;
       if(!m&&item.codigoBarras) m=allProds2.find(function(p){return p.codigo&&p.codigo.replace(/\D/g,'')===(item.codigoBarras||'').replace(/\D/g,'');});
       var idx=m?allProds2.indexOf(m):-1;
