@@ -722,13 +722,6 @@ async function buscarProdPDF(i, termo){
   });
   res.style.display='block';
 }
-  // Busca no banco
-  var url=SB_URL+'/rest/v1/cotacao_produtos?nome=ilike.*'+encodeURIComponent(termo)+'*&order=nome.asc&limit=10';
-  var r=await fetch(url,{headers:SB_H});
-  var prods=await r.json();
-  if(!Array.isArray(prods)||!prods.length){res.innerHTML='<div style="padding:6px;font-size:11px;color:#999">Nenhum encontrado</div>';res.style.display='block';return;}
-  res.innerHTML=prods.map(function(p){return'<div style="padding:5px 8px;font-size:11px;cursor:pointer;border-bottom:1px solid #f0f0f0" onclick="selecionarProdPDF('+i+',''+p.id+'',''+p.nome.replace(/'/g,'')+'')">'+(p.nome)+'</div>';}).join('');
-  res.style.display='block';
 }
 function selecionarProdPDF(i, id, nome){
   var inp=document.getElementById('psearch_'+i);
