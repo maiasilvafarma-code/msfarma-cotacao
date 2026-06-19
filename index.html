@@ -592,7 +592,7 @@ async function processarArquivo(e){
     base64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=function(){rej(new Error('Erro'));};r.readAsDataURL(file);});
   }
   var lista=(S.produtos||[]).map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' ['+p.codigo+']':'');}).join('\n');
-  var prompt='Analise este orcamento farmaceutico. Minha lista:\n'+lista+'\n\nExtraia os precos. Responda APENAS com JSON:\n{"itens":[{"nomePDF":"","preco":0,"prazo":null,"desconto":null,"validade":null,"idxMinha":1}]}\nvalidade no formato YYYY-MM-DD ou null. Sem texto extra.';
+  var prompt='Voce e um assistente de cotacao de farmacia. Analise este orcamento/pedido farmaceutico e extraia os precos dos produtos.\n\nMinha lista de produtos cadastrados:\n'+lista+'\n\nInstrucoes:\n1. Para cada produto do orcamento, encontre o correspondente na minha lista\n2. Use o preco unitario liquido (apos desconto)\n3. Extraia o prazo de pagamento em dias (numero) se houver\n4. Extraia o percentual de desconto se houver\n\nResponda APENAS com JSON valido, sem texto antes ou depois:\n{"itens":[{"nomePDF":"nome exato no pdf","preco":0.00,"prazo":30,"desconto":0,"validade":null,"idxMinha":1}]}\n\nSe nao encontrar correspondencia na minha lista, use idxMinha: null.\nvalidade no formato YYYY-MM-DD ou null.\nNAO inclua texto explicativo, APENAS o JSON.';
   try{
     var block=isImg
       ?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]
