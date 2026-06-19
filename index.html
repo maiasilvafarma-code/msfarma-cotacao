@@ -306,12 +306,23 @@ const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'a
 
 async function sbGet(table, params) {
   const q = params ? '?'+params : '';
-  // Para produtos, busca até 5000 sem travar outras tabelas
-  const isProducts = table === 'cotacao_produtos';
-  const range = isProducts ? '0-4999' : '0-999';
-  const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:{...SB_H,'Range':range,'Prefer':'count=none'}});
+  const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:{...SB_H,'Range':'0-999','Prefer':'count=none'}});
   if(!r.ok) return [];
   return r.json();
+}
+async function sbGetAll(table, params) {
+  const q = params ? '?'+params : '';
+  let all = [], offset = 0;
+  while(true) {
+    const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:{...SB_H,'Range':offset+'-'+(offset+999),'Prefer':'count=none'}});
+    if(!r.ok) break;
+    const page = await r.json();
+    if(!Array.isArray(page)||page.length===0) break;
+    all = all.concat(page);
+    if(page.length<1000) break;
+    offset+=1000;
+  }
+  return all;
 }
 async function sbUpsert(table, data) {
   const r = await fetch(SB_URL+'/rest/v1/'+table, {
@@ -342,7 +353,7 @@ async function carregarDados() {
   try {
     const [forns, prods, precos, hist] = await Promise.all([
       sbGet('cotacao_fornecedores','order=created_at.asc'),
-      sbGet('cotacao_produtos','order=created_at.asc'),
+      sbGet('cotacao_produtos','order=nome.asc&limit=1000'),
       sbGet('cotacao_precos','order=updated_at.asc'),
       sbGet('cotacao_historico','order=created_at.desc')
     ]);
@@ -364,6 +375,11 @@ async function carregarDados() {
   }
   document.getElementById('loading').style.display='none';
   renderForn(); renderProd();
+  // Carrega todos os produtos em background
+  setTimeout(async function(){
+    const todos = await sbGetAll('cotacao_produtos','order=nome.asc');
+    if(todos.length > S.produtos.length){ S.produtos=todos; renderProd(); }
+  }, 500);
 }
 
 // ══ SAVE HELPERS ══
