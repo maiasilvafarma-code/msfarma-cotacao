@@ -770,8 +770,7 @@ function calcularCombo(){
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
         +'<div style="font-weight:600;color:var(--verde)">'+f.nome+'</div>'
         +'<div style="display:flex;gap:6px">'
-        +(tel?'<button class="btn btn-green btn-sm" onclick="window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(''+txtWpp.replace(/'/g,"\'").replace(/
-/g,'\n')+''),'_blank')">📲 Pedir via WhatsApp</button>':'')
+        +(tel?'<button class="btn btn-green btn-sm" onclick="pedirWppForn(this)" data-tel="'+tel+'" data-txt="'+encodeURIComponent(txtWpp)+'">📲 Pedir via WhatsApp</button>':'')
         +'</div></div>'
         +'<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>'
         +itens.map(function(x){return'<tr><td class="pn">'+x.p.nome+'</td><td style="text-align:center">'+x.p.qtd+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.min)+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.min*(x.p.qtd||1))+'</td></tr>';}).join('')
@@ -782,6 +781,11 @@ function calcularCombo(){
   el.innerHTML=alertaHtml+'<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia vs Único Fornecedor</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Você economiza</div><div style="font-size:13px;font-weight:600;color:#059669;padding-top:4px">'+(eco/melhorUnico*100).toFixed(1)+'% comprando no combo ideal</div></div>':'')+'</div>'+linhas.map(function(x){var f=(S.fornecedores||[]).find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('')+pedidoHtml;
 }
 
+function pedirWppForn(btn){
+  var tel=btn.getAttribute('data-tel').replace(/\D/g,'');
+  var txt=decodeURIComponent(btn.getAttribute('data-txt'));
+  window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(txt),'_blank');
+}
 // ══ WHATSAPP ══
 function enviarWhatsApp(){
   if(!(S.fornecedores||[]).length){toast('Cadastre fornecedores primeiro');return;}
