@@ -704,7 +704,7 @@ async function processarArquivo(e){
   }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
 }
 
-async async function buscarProdPDF(i, termo){
+async function buscarProdPDF(i, termo){
   var res=document.getElementById('pres_'+i);
   if(!res)return;
   if(!termo||termo.length<2){res.style.display='none';return;}
