@@ -347,7 +347,7 @@ async function carregarDados() {
   try {
     const [forns, prods, precos, hist] = await Promise.all([
       sbGet('cotacao_fornecedores','order=created_at.asc'),
-      sbGet('cotacao_produtos','order=nome.asc&limit=200'),
+      sbGet('cotacao_produtos','order=nome.asc&limit=50'),
       sbGet('cotacao_precos','order=updated_at.asc'),
       sbGet('cotacao_historico','order=created_at.desc')
     ]);
