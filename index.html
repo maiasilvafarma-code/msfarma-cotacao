@@ -306,7 +306,7 @@ const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'a
 
 async function sbGet(table, params) {
   const q = params ? '?'+params : '';
-  const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:SB_H});
+  const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:{...SB_H,'Range':'0-9999','Prefer':'count=none'}});
   return r.json();
 }
 async function sbUpsert(table, data) {
