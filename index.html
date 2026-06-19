@@ -165,6 +165,9 @@ td.vd input{width:105px;font-size:12px;}
         <input type="file" id="icsv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
       </div>
     </div>
+    <div style="margin-bottom:12px">
+      <input id="busca-prod" type="search" placeholder="Buscar produto..." oninput="renderProd()" style="width:100%;padding:9px 12px;border:1.5px solid var(--cinza2);border-radius:8px;font-size:13px;">
+    </div>
     <div id="lista-prod"></div>
   </div>
 </div>
