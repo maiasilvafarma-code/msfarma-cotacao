@@ -725,7 +725,54 @@ function calcularCombo(){
   if(!linhas.length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
   var melhorUnico=Math.min(...(S.fornecedores||[]).map(function(f){return totF[f.id];}).filter(function(v){return v>0;}));
   var eco=melhorUnico-totalIdeal;
-  el.innerHTML='<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div>':'')+'</div>'+linhas.map(function(x){var f=(S.fornecedores||[]).find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('');
+
+  // ══ ALERTA DE PREÇO ALTO ══
+  var alertasPreco=[];
+  if(S.historico&&S.historico.length&&S.historico[0].snapshot){
+    var snapAnt=S.historico[0].snapshot||{};
+    var precosAnt=snapAnt.cotacoes||{};
+    linhas.forEach(function(x){
+      var melhorAnt=Infinity;
+      Object.keys(precosAnt[x.p.id]||{}).forEach(function(fid){
+        var v=parseFloat((precosAnt[x.p.id][fid]||{}).preco);
+        if(!isNaN(v)&&v>0&&v<melhorAnt)melhorAnt=v;
+      });
+      if(melhorAnt<Infinity){
+        var diff=((x.min-melhorAnt)/melhorAnt)*100;
+        if(diff>=10)alertasPreco.push({nome:x.p.nome,ant:melhorAnt,atual:x.min,diff:diff});
+      }
+    });
+  }
+  var alertaHtml=alertasPreco.length?'<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:12px;margin-bottom:14px"><div style="font-weight:600;color:#92400E;margin-bottom:8px">⚠️ Alertas de Preço Alto</div>'+alertasPreco.map(function(a){return'<div style="font-size:12px;color:#92400E;padding:3px 0">📈 <b>'+a.nome+'</b>: era '+moeda(a.ant)+' → agora '+moeda(a.atual)+' <span style="color:var(--erro);font-weight:600">(+'+a.diff.toFixed(0)+'%)</span></div>';}).join('')+'</div>':'';
+
+  // ══ PEDIDO POR FORNECEDOR ══
+  var pedidosPorForn={};
+  linhas.forEach(function(x){
+    if(!pedidosPorForn[x.mf])pedidosPorForn[x.mf]=[];
+    pedidosPorForn[x.mf].push(x);
+  });
+  var pedidoHtml='<div style="margin-top:18px"><div style="font-weight:600;font-size:13px;color:var(--cinza4);text-transform:uppercase;margin-bottom:10px">📋 Pedido por Fornecedor</div>'+
+    Object.keys(pedidosPorForn).map(function(fid){
+      var f=(S.fornecedores||[]).find(function(ff){return ff.id===fid;})||{};
+      var itens=pedidosPorForn[fid];
+      var totalF=itens.reduce(function(s,x){return s+x.min*(x.p.qtd||1);},0);
+      var tel=f.contato?(f.contato.replace(/\D/g,'')):'';
+      var lista=itens.map(function(x,i){return(i+1)+'. '+x.p.nome+' — Qtd: '+x.p.qtd+' '+x.p.unidade+' — '+moeda(x.min)+'/un';}).join('\n');
+      var txtWpp='Ola, '+f.nome+'!\n\nSegue o PEDIDO DE COMPRA da *MS Farma*:\n\n'+lista+'\n\n*Total: '+moeda(totalF)+'*\n\nObrigada!';
+      return'<div style="border:1px solid var(--cinza2);border-radius:10px;padding:12px;margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<div style="font-weight:600;color:var(--verde)">'+f.nome+'</div>'
+        +'<div style="display:flex;gap:6px">'
+        +(tel?'<button class="btn btn-green btn-sm" onclick="window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(''+txtWpp.replace(/'/g,"\'").replace(/
+/g,'\n')+''),'_blank')">📲 Pedir via WhatsApp</button>':'')
+        +'</div></div>'
+        +'<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>'
+        +itens.map(function(x){return'<tr><td class="pn">'+x.p.nome+'</td><td style="text-align:center">'+x.p.qtd+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.min)+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.min*(x.p.qtd||1))+'</td></tr>';}).join('')
+        +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600;padding-top:6px">Total:</td><td style="text-align:right;font-weight:600;color:var(--verde);font-family:monospace;padding-top:6px">'+moeda(totalF)+'</td></tr></tfoot></table>'
+        +'</div>';
+    }).join('')+'</div>';
+
+  el.innerHTML=alertaHtml+'<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia vs Único Fornecedor</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div>':'')+'</div>'+linhas.map(function(x){var f=(S.fornecedores||[]).find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('')+pedidoHtml;
 }
 
 // ══ WHATSAPP ══
