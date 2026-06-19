@@ -699,7 +699,16 @@ async function processarArquivo(e){
     pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
     stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
-    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item){var m=item.idxMinha?(S.produtos||[])[item.idxMinha-1]:null;return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'--')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'--')+'</td><td style="text-align:center">'+(item.validade||'--')+'</td><td style="font-size:11px;color:var(--verde)">'+(m?'OK - '+m.nome:'Nao mapeado')+'</td></tr>';}).join('')+'</tbody></table>';
+    document.var allProds2=todosProdutos||S.produtos||[];
+    var optsHtml='<option value="">-- Selecione --</option>'+allProds2.map(function(p,i){return'<option value="'+i+'">'+p.nome+'</option>';}).join('');
+    getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
+      var m=item.idxMinha?allProds2[item.idxMinha-1]:null;
+      if(!m&&item.codigoBarras) m=allProds2.find(function(p){return p.codigo&&p.codigo.replace(/\D/g,'')===(item.codigoBarras||'').replace(/\D/g,'');});
+      var idx=m?allProds2.indexOf(m):-1;
+      var selVal=idx>=0?' value="'+idx+'"':'';
+      return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'--')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'--')+'</td><td style="text-align:center">'+(item.validade||'--')+'</td><td><select id="psel_'+i+'" style="font-size:11px;padding:2px;width:160px"><option value="">-- Selecione --</option>'+allProds2.map(function(p,j){return'<option value="'+j+'">'+p.nome+'</option>';}).join('')+'</select></td></tr>';
+    }).join('')+'</tbody></table>';
+    pdfDados.forEach(function(item,i){var m=item.idxMinha?allProds2[item.idxMinha-1]:null;if(!m&&item.codigoBarras)m=allProds2.find(function(p){return p.codigo&&p.codigo.replace(/\D/g,'')===(item.codigoBarras||'').replace(/\D/g,'');});var idx=m?allProds2.indexOf(m):-1;var sel=document.getElementById('psel_'+i);if(sel&&idx>=0)sel.value=idx;});
     pvEl.style.display='block';
   }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
 }
