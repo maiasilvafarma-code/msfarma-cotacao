@@ -245,6 +245,7 @@ td.vd input{width:105px;font-size:12px;}
         <select id="punid"><option>CX</option><option>UN</option><option>FR</option><option>BL</option><option>AM</option><option>TB</option></select>
       </div>
       <div class="form-group"><label>Qtd. solicitada</label><input id="pqtd" type="number" placeholder="1" min="1"></div>
+      <div class="form-group"><label>Qtd. padrão 🏷️</label><input id="pqtdpadrao" type="number" placeholder="Qtd padrão" min="1" title="Quantidade padrão que sempre é usada para este produto"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn btn-outline" onclick="fecharM('mprod')">Cancelar</button>
@@ -462,14 +463,15 @@ function renderForn(){
 // ══ PRODUTOS ══
 function abrirMP(id){
   document.getElementById('pid').value=id||'';
-  if(id){const p=(S.produtos||[]).find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;}
-  else{['pnome','pcodigo'].forEach(x=>document.getElementById(x).value='');document.getElementById('punid').value='CX';document.getElementById('pqtd').value=1;}
+  if(id){const p=(S.produtos||[]).find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;document.getElementById('pqtdpadrao').value=p.qtdpadrao||'';}
+  else{['pnome','pcodigo'].forEach(x=>document.getElementById(x).value='');document.getElementById('punid').value='CX';document.getElementById('pqtd').value=1;document.getElementById('pqtdpadrao').value='';}
   abrirM('mprod');setTimeout(()=>document.getElementById('pnome').focus(),80);
 }
 async function salvarP(){
   const nome=document.getElementById('pnome').value.trim();if(!nome){toast('Informe o nome');return;}
   const id=document.getElementById('pid').value||uid();
-  const obj={id,nome,codigo:document.getElementById('pcodigo').value.trim(),unidade:document.getElementById('punid').value,qtd:parseInt(document.getElementById('pqtd').value)||1};
+  const qtdpadrao=parseInt(document.getElementById('pqtdpadrao').value)||null;
+  const obj={id,nome,codigo:document.getElementById('pcodigo').value.trim(),unidade:document.getElementById('punid').value,qtd:parseInt(document.getElementById('pqtd').value)||1,qtdpadrao:qtdpadrao};
   const i=S.produtos.findIndex(x=>x.id===id);if(i>=0)S.produtos[i]=obj;else S.produtos.push(obj);
   renderProd();fecharM('mprod');
   await saveP(obj);toast('Produto salvo na nuvem');
@@ -772,7 +774,7 @@ function calcularCombo(){
         +'</div>';
     }).join('')+'</div>';
 
-  el.innerHTML=alertaHtml+'<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia vs Único Fornecedor</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div>':'')+'</div>'+linhas.map(function(x){var f=(S.fornecedores||[]).find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('')+pedidoHtml;
+  el.innerHTML=alertaHtml+'<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia vs Único Fornecedor</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Você economiza</div><div style="font-size:13px;font-weight:600;color:#059669;padding-top:4px">'+(eco/melhorUnico*100).toFixed(1)+'% comprando no combo ideal</div></div>':'')+'</div>'+linhas.map(function(x){var f=(S.fornecedores||[]).find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('')+pedidoHtml;
 }
 
 // ══ WHATSAPP ══
@@ -827,6 +829,23 @@ async function excluirHist(id){
 }
 function renderHist(){
   var el=document.getElementById('hist');
+  // Lembrete de nova cotação
+  var lembEl=document.getElementById('lembrete-cotacao');
+  if(lembEl){
+    if(S.historico&&S.historico.length){
+      var ultima=S.historico[0];
+      if(ultima&&ultima.data){
+        var partes=ultima.data.split('/');
+        var dataUlt=partes.length===3?new Date(partes[2],partes[1]-1,partes[0]):null;
+        if(dataUlt){
+          var dias=Math.floor((new Date()-dataUlt)/(1000*60*60*24));
+          if(dias>=7){
+            lembEl.innerHTML='<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between"><span style="color:#92400E;font-size:13px">📅 Sua última cotação foi há <b>'+dias+' dias</b>. Que tal fazer uma nova?</span><button class="btn btn-sm" style="background:#F59E0B;color:#fff" onclick="document.querySelector('.tab').click()">Nova Cotação</button></div>';
+          } else { lembEl.innerHTML=''; }
+        }
+      }
+    } else { lembEl.innerHTML=''; }
+  }
   if(!S.historico.length){el.innerHTML='<div class="empty"><div class="ei">📂</div><div class="et">Nenhuma cotacao salva.<br>Clique em "Salvar cotacao atual".</div></div>';document.getElementById('card-graf').style.display='none';return;}
   el.innerHTML=(S.historico||[]).map(function(h){return'<div class="hi"><div class="hh"><div><div class="hn">'+h.nome+'</div><div class="hd">'+(h.data||'')+'</div></div><div style="display:flex;gap:5px"><button class="btn btn-danger btn-xs" onclick="excluirHist(\''+h.id+'\')">🗑</button></div></div></div>';}).join('');
   document.getElementById('card-graf').style.display='block';
