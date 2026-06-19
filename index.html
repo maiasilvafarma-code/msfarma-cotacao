@@ -347,16 +347,15 @@ function setSyncStatus(status) {
 // ══ LOAD FROM SUPABASE ══
 async function carregarDados() {
   try {
-    const [forns, prods, precos, hist] = await Promise.all([
-      sbGet('cotacao_fornecedores','order=created_at.asc'),
-      sbGet('cotacao_produtos','order=nome.asc&limit=50'),
-      sbGet('cotacao_precos','order=updated_at.asc'),
-      sbGet('cotacao_historico','order=created_at.desc')
-    ]);
+    // Carrega sequencialmente para não sobrecarregar
+    const forns = await sbGet('cotacao_fornecedores','order=created_at.asc');
     S.fornecedores = Array.isArray(forns) ? forns : [];
+    renderForn();
+
+    const prods = await sbGet('cotacao_produtos','order=nome.asc&limit=50');
     S.produtos = Array.isArray(prods) ? prods : [];
-    S.historico = Array.isArray(hist) ? hist.map(h=>({...h,...h.snapshot})) : [];
-    // Build cotacoes object
+
+    const precos = await sbGet('cotacao_precos','order=updated_at.asc');
     S.cotacoes = {};
     if(Array.isArray(precos)) {
       precos.forEach(p=>{
@@ -364,13 +363,18 @@ async function carregarDados() {
         S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};
       });
     }
+
+    const hist = await sbGet('cotacao_historico','order=created_at.desc');
+    S.historico = Array.isArray(hist) ? hist.map(h=>({...h,...h.snapshot})) : [];
+
     setSyncStatus('ok');
   } catch(e) {
     setSyncStatus('err');
     toast('Erro ao carregar dados da nuvem');
   }
   document.getElementById('loading').style.display='none';
-  renderForn(); abrirTabProdutos();
+  abrirTabProdutos();
+  renderHist();
 }
 
 // ══ SAVE HELPERS ══
