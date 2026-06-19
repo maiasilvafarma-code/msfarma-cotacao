@@ -512,14 +512,21 @@ function renderProd(resetPage){
   if(_prodPage>=totalPag)_prodPage=totalPag-1;
   var inicio=_prodPage*_prodPageSize;
   var pagina=filtrado.slice(inicio,inicio+_prodPageSize);
+  var jaNaCotacao=(S.produtos||[]).map(function(p){return p.id;});
   var rows=pagina.map(function(p,i){
     var id=p.id;
+    var jaTem=jaNaCotacao.indexOf(id)>=0;
     return "<tr><td style='color:var(--cinza3);font-size:11px'>"+String(inicio+i+1).padStart(2,"0")+"</td>"
       +"<td class='pn'>"+p.nome+"</td>"
       +"<td style='font-size:11px;color:var(--cinza4)'>"+(p.codigo||"--")+"</td>"
       +"<td style='text-align:center'>"+p.qtd+"</td>"
       +"<td><span class='chip'>"+p.unidade+"</span></td>"
-      +"<td style='display:flex;gap:4px'>"
+      +"<td style='display:flex;gap:4px;align-items:center'>"
+      +(jaTem
+        ?"<span style='font-size:11px;color:var(--verde);font-weight:600'>✓ Na cotação</span>"
+        :"<input type='number' id='qtd_"+id+"' min='1' value='1' style='width:50px;padding:3px;border:1px solid var(--cinza2);border-radius:4px;font-size:12px'> "
+         +"<button class='btn btn-sm' style='background:var(--verde);color:#fff;font-size:11px' onclick='adicionarCotacao(&quot;"+id+"&quot;,&quot;"+p.nome.replace(/'/g,"\'")+"&quot;,&quot;"+(p.codigo||"")+"&quot;,&quot;"+p.unidade+"&quot;)'>+ Cotar</button>"
+      )
       +"<button class='btn btn-outline btn-xs' onclick='abrirMP(&quot;"+id+"&quot;)'>✏️</button>"
       +"<button class='btn btn-danger btn-xs' onclick='excluirP(&quot;"+id+"&quot;)'>🗑</button>"
       +"</td></tr>";
@@ -530,6 +537,19 @@ function renderProd(resetPage){
     +(_prodPage<totalPag-1?"<button class='btn btn-outline btn-sm' onclick='_prodPage++;renderProd()'>Próxima ▶</button>":"")
     +"</div>":"";
   el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+rows+"</tbody></table></div>"+nav;
+}
+async function adicionarCotacao(id, nome, codigo, unidade){
+  var qtdEl=document.getElementById('qtd_'+id);
+  var qtd=qtdEl?parseInt(qtdEl.value)||1:1;
+  // Verifica se já existe
+  if((S.produtos||[]).find(function(p){return p.id===id;})){
+    toast('Produto já está na cotação!'); return;
+  }
+  var obj={id:id,nome:nome,codigo:codigo||null,unidade:unidade||'CX',qtd:qtd};
+  S.produtos.push(obj);
+  await saveP(obj);
+  toast('✅ '+nome+' adicionado à cotação!');
+  renderProd();
 }
 async function importarCSV(e){
   const file=e.target.files[0];if(!file)return;
