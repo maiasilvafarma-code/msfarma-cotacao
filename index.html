@@ -368,7 +368,7 @@ async function carregarDados() {
     toast('Erro ao carregar dados da nuvem');
   }
   document.getElementById('loading').style.display='none';
-  renderForn(); renderProd();
+  renderForn(); abrirTabProdutos();
 }
 
 // ══ SAVE HELPERS ══
@@ -426,7 +426,7 @@ function abrirTab(n,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');el.classList.add('active');
   if(n==='cotacao')renderCot();if(n==='placar')calcularPlacar();
-  if(n==='produtos')renderProd();if(n==='fornecedores')renderForn();
+  if(n==='produtos')abrirTabProdutos();if(n==='fornecedores')renderForn();
   if(n==='combo')calcularCombo();if(n==='graficos')renderHist();
 }
 
@@ -480,6 +480,12 @@ async function excluirP(id){
   renderProd();setSyncStatus('sync');
   await sbDelete('cotacao_produtos',id);
   setSyncStatus('ok');toast('Removido');
+}
+function abrirTabProdutos(){
+  var el=document.getElementById('lista-prod');
+  if(!el) return;
+  // Só mostra dica, não carrega nada
+  el.innerHTML='<div class="empty"><div class="ei">🔍</div><div class="et">Digite o nome do produto para buscar</div></div>';
 }
 var _prodBuscaTimer=null;
 async function buscarNoBanco(termo){
