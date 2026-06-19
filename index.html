@@ -473,25 +473,26 @@ async function excluirP(id){
   setSyncStatus('ok');toast('Removido');
 }
 function renderProd(){
-  var el=document.getElementById('lista-prod');
+  var el=document.getElementById("lista-prod");
   if(!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto.</div></div>';return;}
-  var buscaEl=document.getElementById('busca-prod');
-  var busca=buscaEl?buscaEl.value.toLowerCase().trim():'';
-  var sorted=[...(S.produtos||[])].sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR');});
-  var filtrado=busca?sorted.filter(function(p){return p.nome.toLowerCase().indexOf(busca)>=0||(p.codigo||'').indexOf(busca)>=0;}):sorted;
-  if(!filtrado.length){el.innerHTML='<div class="empty"><div class="ei">🔍</div><div class="et">Nenhum produto encontrado.</div></div>';return;}
+  var buscaEl=document.getElementById("busca-prod");
+  var busca=buscaEl?buscaEl.value.toLowerCase().trim():"";
+  var sorted=[...(S.produtos||[])].sort(function(a,b){return a.nome.localeCompare(b.nome,"pt-BR");});
+  var filtrado=busca?sorted.filter(function(p){return p.nome.toLowerCase().indexOf(busca)>=0||(p.codigo||"").indexOf(busca)>=0;}):sorted;
+  if(!filtrado.length){el.innerHTML='<div class="empty"><div class="ei">🔍</div><div class="et">Nenhum encontrado.</div></div>';return;}
   var rows=filtrado.map(function(p,i){
-    return '<tr><td style="color:var(--cinza3);font-size:11px">'+String(i+1).padStart(2,'0')+'</td>'
-      +'<td class="pn">'+p.nome+'</td>'
-      +'<td style="font-size:11px;color:var(--cinza4)">'+(p.codigo||'--')+'</td>'
-      +'<td style="text-align:center">'+p.qtd+'</td>'
-      +'<td><span class="chip">'+p.unidade+'</span></td>'
-      +'<td style="display:flex;gap:4px">'
-      +'<button class="btn btn-outline btn-xs" onclick="abrirMP(''+p.id+'')">✏️</button>'
-      +'<button class="btn btn-danger btn-xs" onclick="excluirP(''+p.id+'')">🗑</button>'
-      +'</td></tr>';
-  }).join('');
-  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    var id=p.id;
+    return "<tr><td style='color:var(--cinza3);font-size:11px'>"+String(i+1).padStart(2,"0")+"</td>"
+      +"<td class='pn'>"+p.nome+"</td>"
+      +"<td style='font-size:11px;color:var(--cinza4)'>"+(p.codigo||"--")+"</td>"
+      +"<td style='text-align:center'>"+p.qtd+"</td>"
+      +"<td><span class='chip'>"+p.unidade+"</span></td>"
+      +"<td style='display:flex;gap:4px'>"
+      +"<button class='btn btn-outline btn-xs' onclick='abrirMP(&quot;"+id+"&quot;)'>✏️</button>"
+      +"<button class='btn btn-danger btn-xs' onclick='excluirP(&quot;"+id+"&quot;)'>🗑</button>"
+      +"</td></tr>";
+  }).join("");
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Produto</th><th>Codigo</th><th>Qtd</th><th>Un</th><th></th></tr></thead><tbody>'+rows+"</tbody></table></div>";
 }
 async function importarCSV(e){
   const file=e.target.files[0];if(!file)return;
