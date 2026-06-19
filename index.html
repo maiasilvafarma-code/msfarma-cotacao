@@ -306,7 +306,11 @@ const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'a
 
 async function sbGet(table, params) {
   const q = params ? '?'+params : '';
-  const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:{...SB_H,'Range':'0-4999','Prefer':'count=none'}});
+  // Para produtos, busca até 5000 sem travar outras tabelas
+  const isProducts = table === 'cotacao_produtos';
+  const range = isProducts ? '0-4999' : '0-999';
+  const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:{...SB_H,'Range':range,'Prefer':'count=none'}});
+  if(!r.ok) return [];
   return r.json();
 }
 async function sbUpsert(table, data) {
