@@ -694,31 +694,45 @@ async function processarArquivo(e){
     pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
     stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
-    var allProds2=S.produtos||[];
-    var optsHtml='<option value="">-- Selecione --</option>'+allProds2.map(function(p,i){return'<option value="'+i+'">'+p.nome+'</option>';}).join('');
-    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
-      var m=item.idxMinha?allProds2[item.idxMinha-1]:null;
-      if(!m&&item.codigoBarras) m=allProds2.find(function(p){return p.codigo&&p.codigo.replace(/\D/g,'')===(item.codigoBarras||'').replace(/\D/g,'');});
-      var idx=m?allProds2.indexOf(m):-1;
-      var selVal=idx>=0?' value="'+idx+'"':'';
-      return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'--')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'--')+'</td><td style="text-align:center">'+(item.validade||'--')+'</td><td><select id="psel_'+i+'" style="font-size:11px;padding:2px;width:160px"><option value="">-- Selecione --</option>'+allProds2.map(function(p,j){return'<option value="'+j+'">'+p.nome+'</option>';}).join('')+'</select></td></tr>';
+    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto (busca)</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
+      return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'--')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'--')+'</td><td style="text-align:center">'+(item.validade||'--')+'</td>'
+      +'<td><input id="psearch_'+i+'" type="text" placeholder="Digite o nome..." style="font-size:11px;padding:3px;width:180px;border:1px solid #ddd;border-radius:4px" oninput="buscarProdPDF('+i+',this.value)">'
+      +'<div id="pres_'+i+'" style="position:absolute;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:120px;overflow-y:auto;z-index:999;width:200px;display:none"></div>'
+      +'<input type="hidden" id="psel_'+i+'" value=""></td></tr>';
     }).join('')+'</tbody></table>';
-    pdfDados.forEach(function(item,i){var m=item.idxMinha?allProds2[item.idxMinha-1]:null;if(!m&&item.codigoBarras)m=allProds2.find(function(p){return p.codigo&&p.codigo.replace(/\D/g,'')===(item.codigoBarras||'').replace(/\D/g,'');});var idx=m?allProds2.indexOf(m):-1;var sel=document.getElementById('psel_'+i);if(sel&&idx>=0)sel.value=idx;});
     pvEl.style.display='block';
   }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
 }
 
+async function buscarProdPDF(i, termo){
+  var res=document.getElementById('pres_'+i);
+  if(!res)return;
+  if(!termo||termo.length<2){res.style.display='none';return;}
+  // Busca no banco
+  var url=SB_URL+'/rest/v1/cotacao_produtos?nome=ilike.*'+encodeURIComponent(termo)+'*&order=nome.asc&limit=10';
+  var r=await fetch(url,{headers:SB_H});
+  var prods=await r.json();
+  if(!Array.isArray(prods)||!prods.length){res.innerHTML='<div style="padding:6px;font-size:11px;color:#999">Nenhum encontrado</div>';res.style.display='block';return;}
+  res.innerHTML=prods.map(function(p){return'<div style="padding:5px 8px;font-size:11px;cursor:pointer;border-bottom:1px solid #f0f0f0" onclick="selecionarProdPDF('+i+',''+p.id+'',''+p.nome.replace(/'/g,'')+'')">'+(p.nome)+'</div>';}).join('');
+  res.style.display='block';
+}
+function selecionarProdPDF(i, id, nome){
+  var inp=document.getElementById('psearch_'+i);
+  var hid=document.getElementById('psel_'+i);
+  var res=document.getElementById('pres_'+i);
+  if(inp)inp.value=nome;
+  if(hid)hid.value=id;
+  if(res)res.style.display='none';
+}
 async function aplicarPDF(){
   var ap=0;
-  var allProds=S.produtos||[];
   for(var i=0;i<pdfDados.length;i++){
     var item=pdfDados[i];
-    var sel=document.getElementById('psel_'+i);
-    var prod=null;
-    if(sel&&sel.value!=='') prod=allProds[parseInt(sel.value)];
-    if(!prod)continue;
+    var hid=document.getElementById('psel_'+i);
+    if(!hid||!hid.value)continue;
+    var prodId=hid.value;
     var dados={preco:item.preco||'',prazo:item.prazo||'',desconto:item.desconto||'',validade:item.validade||''};
-    await savePreco(prod.id,pdfFornId,dados);ap++;
+    await savePreco(prodId,pdfFornId,dados);ap++;
   }
   fecharM('mpdf');toast(ap+' preco(s) salvos na nuvem!');
 }
