@@ -26,7 +26,7 @@ header{background:var(--verde);color:var(--branco);padding:0 20px;height:56px;di
 .sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;}
 .sync-dot.sync{animation:pulse 1s infinite;}
 .sync-dot.err{background:#f87171;}
-.tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;}
+.tabs{background:var(--branco);border-bottom:1px solid var(--cinza2);display:flex;padding:0 6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100;}
 .tabs::-webkit-scrollbar{display:none;}
 .tab{padding:13px 12px 11px;font-size:12px;font-weight:500;color:var(--cinza4);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
 .tab:hover{color:var(--verde);}
