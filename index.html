@@ -355,7 +355,7 @@ async function carregarDados() {
     const prods = await sbGet('cotacao_produtos','order=nome.asc&limit=50');
     S.produtos = Array.isArray(prods) ? prods : [];
 
-    const precos = await sbGet('cotacao_precos','order=updated_at.asc');
+    const precos = await sbGet('cotacao_precos','order=updated_at.asc&limit=500');
     S.cotacoes = {};
     if(Array.isArray(precos)) {
       precos.forEach(p=>{
