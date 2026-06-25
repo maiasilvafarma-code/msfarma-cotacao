@@ -767,13 +767,29 @@ async function processarArquivo(e){
       var formCad=document.createElement('div');
       formCad.id='pform_'+i;
       formCad.style.cssText='display:none;margin-top:6px;padding:8px;background:#fff8f0;border:1px solid #e67e22;border-radius:6px';
-      formCad.innerHTML='<div style="font-size:11px;font-weight:600;color:#e67e22;margin-bottom:5px">📝 Cadastrar novo produto</div>'
-        +'<input id="pcad_nome_'+i+'" type="text" placeholder="Nome do produto" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px">'
-        +'<input id="pcad_cod_'+i+'" type="text" placeholder="Código de barras (opcional)" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px">'
-        +'<div style="display:flex;gap:5px;justify-content:flex-end">'
-        +'<button onclick="document.getElementById('pform_'+i+'').style.display='none'" style="font-size:11px;padding:3px 8px;background:#eee;border:none;border-radius:4px;cursor:pointer">Cancelar</button>'
-        +'<button onclick="cadastrarEVincular('+i+')" style="font-size:11px;padding:3px 10px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer">✅ Salvar e vincular</button>'
-        +'</div>';
+      (function(){
+        var titDiv=document.createElement('div');
+        titDiv.style.cssText='font-size:11px;font-weight:600;color:#e67e22;margin-bottom:5px';
+        titDiv.textContent='📝 Cadastrar novo produto';
+        var inpNome=document.createElement('input');
+        inpNome.type='text'; inpNome.id='pcad_nome_'+i; inpNome.placeholder='Nome do produto';
+        inpNome.style.cssText='width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px';
+        var inpCod=document.createElement('input');
+        inpCod.type='text'; inpCod.id='pcad_cod_'+i; inpCod.placeholder='Código de barras (opcional)';
+        inpCod.style.cssText='width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px';
+        var rowBtns=document.createElement('div');
+        rowBtns.style.cssText='display:flex;gap:5px;justify-content:flex-end';
+        var btnCancel=document.createElement('button');
+        btnCancel.textContent='Cancelar';
+        btnCancel.style.cssText='font-size:11px;padding:3px 8px;background:#eee;border:none;border-radius:4px;cursor:pointer';
+        btnCancel.onclick=(function(idx){return function(){document.getElementById('pform_'+idx).style.display='none';};})(i);
+        var btnSalvar=document.createElement('button');
+        btnSalvar.textContent='✅ Salvar e vincular';
+        btnSalvar.style.cssText='font-size:11px;padding:3px 10px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer';
+        btnSalvar.onclick=(function(idx){return function(){cadastrarEVincular(idx);};})(i);
+        rowBtns.appendChild(btnCancel); rowBtns.appendChild(btnSalvar);
+        formCad.appendChild(titDiv); formCad.appendChild(inpNome); formCad.appendChild(inpCod); formCad.appendChild(rowBtns);
+      })();
       tdProd.appendChild(statusSpan);
       tdProd.appendChild(inp);
       tdProd.appendChild(drop);
