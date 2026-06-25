@@ -431,7 +431,7 @@ function abrirTab(n,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');el.classList.add('active');
-  if(n==='cotacao')renderCot();if(n==='placar')calcularPlacar();
+  if(n==='cotacao'){(async function(){var rp=await fetch(SB_URL+'/rest/v1/cotacao_produtos?order=nome.asc&limit=5000',{headers:{...SB_H,'Prefer':'count=none'}});var prds=await rp.json();if(Array.isArray(prds)&&prds.length)S.produtos=prds;var rpc=await fetch(SB_URL+'/rest/v1/cotacao_precos?order=updated_at.asc&limit=5000',{headers:{...SB_H,'Prefer':'count=none'}});var pcs=await rpc.json();S.cotacoes={};if(Array.isArray(pcs)){pcs.forEach(function(p){if(!S.cotacoes[p.produto_id])S.cotacoes[p.produto_id]={};S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};});}renderCot();})();}if(n==='placar')calcularPlacar();
   if(n==='produtos')abrirTabProdutos();if(n==='fornecedores')renderForn();
   if(n==='combo')calcularCombo();if(n==='graficos')renderHist();
 }
@@ -683,8 +683,8 @@ async function processarArquivo(e){
     if(!Array.isArray(todosProdutos))todosProdutos=S.produtos||[];
   }catch(e){todosProdutos=S.produtos||[];}
   stEl.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span><b>Lendo com IA... aguarde</b></div>';
-  var lista=todosProdutos.map(function(p){return'ID:'+p.id+' | '+p.nome+(p.codigo?' [cod:'+p.codigo+']':'');}).join('\n');
-  var prompt='Voce e um assistente de cotacao de farmacia. Analise este orcamento e extraia os precos.\n\nMeus produtos cadastrados (ID | nome [cod:codigoBarras]):\n'+lista+'\n\nInstrucoes:\n1. Para cada produto do orcamento, encontre o correspondente pelo codigo de barras OU nome similar\n2. Use o preco unitario liquido (apos desconto)\n3. Extraia prazo de pagamento em dias se houver\n4. Extraia percentual de desconto se houver\n5. Se nao encontrar correspondencia use produtoId null\n\nResponda APENAS JSON valido sem texto:\n{"itens":[{"nomePDF":"nome no pdf","preco":0.00,"prazo":30,"desconto":0,"validade":null,"produtoId":"id-exato-da-lista-ou-null"}]}\n\nvalidade formato YYYY-MM-DD ou null. APENAS JSON.';
+  var lista=todosProdutos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' [cod:'+p.codigo+']':'');}).join('\n');
+  var prompt='Voce e um assistente de cotacao de farmacia. Analise este orcamento/pedido farmaceutico e extraia os precos dos produtos.\n\nMinha lista de produtos cadastrados (numero. nome [cod:codigoBarras]):\n'+lista+'\n\nInstrucoes:\n1. Para cada produto do orcamento, encontre o correspondente na minha lista comparando pelo codigo de barras (campo cod:) OU pelo nome similar\n2. Use o preco unitario liquido (apos desconto)\n3. Extraia o prazo de pagamento em dias (numero) se houver\n4. Extraia o percentual de desconto se houver\n5. Extraia o codigo de barras do produto no orcamento se houver\n\nResponda APENAS com JSON valido, sem texto antes ou depois:\n{"itens":[{"nomePDF":"nome exato no pdf","codigoBarras":"codigo de barras do produto","preco":0.00,"prazo":30,"desconto":0,"validade":null,"idxMinha":1}]}\n\nSe nao encontrar correspondencia na minha lista, use idxMinha: null.\nvalidade no formato YYYY-MM-DD ou null.\nNAO inclua texto explicativo, APENAS o JSON.';
   try{
     var block=isImg
       ?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]
@@ -701,14 +701,14 @@ async function processarArquivo(e){
     try { parsed=JSON.parse(txt); } catch(e) { stEl.innerHTML='<span style="color:var(--erro)">Erro ao processar resposta da IA</span>';document.getElementById('pdfcancel').style.display='flex';return; }
     pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
-    // Mapear produtoId retornado pela IA
-    var todosProd=todosProdutos||S.produtos||[];
-    var prodMap={};todosProd.forEach(function(p){prodMap[p.id]=p;});
+    // Mapear idxMinha (1-based) para produto real
+    var todosProd=S.produtos||[];
     var mapeados=0,naoMapeados=0;
     pdfDados.forEach(function(item){
-      if(item.produtoId&&prodMap[item.produtoId]){
-        var prod=prodMap[item.produtoId];
-        item._prodId=prod.id;item._prodNome=prod.nome;mapeados++;
+      if(item.idxMinha&&item.idxMinha>0){
+        var prod=todosProd[item.idxMinha-1];
+        if(prod){item._prodId=prod.id;item._prodNome=prod.nome;mapeados++;}
+        else{item._prodId=null;item._prodNome='';naoMapeados++;}
       } else {item._prodId=null;item._prodNome='';naoMapeados++;}
     });
     var casados=mapeados,nao=naoMapeados;
