@@ -431,7 +431,26 @@ function abrirTab(n,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');el.classList.add('active');
-  if(n==='cotacao'){(async function(){var rp=await fetch(SB_URL+'/rest/v1/cotacao_produtos?order=nome.asc&limit=5000',{headers:{...SB_H,'Prefer':'count=none'}});var prds=await rp.json();if(Array.isArray(prds)&&prds.length)S.produtos=prds;var rpc=await fetch(SB_URL+'/rest/v1/cotacao_precos?order=updated_at.asc&limit=5000',{headers:{...SB_H,'Prefer':'count=none'}});var pcs=await rpc.json();S.cotacoes={};if(Array.isArray(pcs)){pcs.forEach(function(p){if(!S.cotacoes[p.produto_id])S.cotacoes[p.produto_id]={};S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};});}renderCot();})();}if(n==='placar')calcularPlacar();
+  if(n==='cotacao'){(async function(){
+  // 1. Buscar precos primeiro (mais rapido - tabela menor)
+  var rpc=await fetch(SB_URL+'/rest/v1/cotacao_precos?order=updated_at.asc&limit=5000',{headers:{...SB_H,'Prefer':'count=none'}});
+  var pcs=await rpc.json();
+  S.cotacoes={};
+  var prodIdsComPreco=new Set();
+  if(Array.isArray(pcs)){pcs.forEach(function(p){
+    if(!S.cotacoes[p.produto_id])S.cotacoes[p.produto_id]={};
+    S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};
+    if(p.preco&&p.preco>0)prodIdsComPreco.add(p.produto_id);
+  });}
+  // 2. Buscar só os produtos que têm preço cadastrado
+  if(prodIdsComPreco.size>0){
+    var ids=Array.from(prodIdsComPreco).join(',');
+    var rp=await fetch(SB_URL+'/rest/v1/cotacao_produtos?id=in.('+ids+')&order=nome.asc',{headers:{...SB_H,'Prefer':'count=none'}});
+    var prds=await rp.json();
+    if(Array.isArray(prds)&&prds.length)S.produtos=prds;
+  }
+  renderCot();
+})();}if(n==='placar')calcularPlacar();
   if(n==='produtos')abrirTabProdutos();if(n==='fornecedores')renderForn();
   if(n==='combo')calcularCombo();if(n==='graficos')renderHist();
 }
