@@ -693,13 +693,76 @@ async function processarArquivo(e){
     try { parsed=JSON.parse(txt); } catch(e) { stEl.innerHTML='<span style="color:var(--erro)">Erro ao processar resposta da IA</span>';document.getElementById('pdfcancel').style.display='flex';return; }
     pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
-    stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
-    document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto (busca)</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
-      return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'--')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'--')+'</td><td style="text-align:center">'+(item.validade||'--')+'</td>'
-      +'<td><input id="psearch_'+i+'" type="text" placeholder="Digite o nome..." style="font-size:12px;padding:5px 6px;width:210px;border:1px solid #bbb;border-radius:5px" oninput="buscarProdPDF('+i+',this.value)">'
-      +'<div id="pres_'+i+'" style="position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:150px;overflow-y:auto;z-index:9999;width:230px;display:none;box-shadow:0 4px 12px rgba(0,0,0,.2)"></div>'
-      +'<input type="hidden" id="psel_'+i+'" value=""></td></tr>';
-    }).join('')+'</tbody></table>';
+    // Mapear idxMinha (1-based) para produto real
+    var todosProd=S.produtos||[];
+    var mapeados=0,naoMapeados=0;
+    pdfDados.forEach(function(item){
+      if(item.idxMinha&&item.idxMinha>0){
+        var prod=todosProd[item.idxMinha-1];
+        if(prod){item._prodId=prod.id;item._prodNome=prod.nome;mapeados++;}
+        else{item._prodId=null;item._prodNome='';naoMapeados++;}
+      } else {item._prodId=null;item._prodNome='';naoMapeados++;}
+    });
+    var casados=mapeados,nao=naoMapeados;
+    stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>'
+      +(casados?' &nbsp;✅ <b>'+casados+' casados automaticamente</b>':'')
+      +(nao?' &nbsp;⚠️ <span style="color:#e67e22">'+nao+' sem correspondência</span>':'');
+    var tabEl=document.getElementById('pdftab');
+    tabEl.innerHTML='';
+    var tbl=document.createElement('table');
+    var thead=document.createElement('thead');
+    thead.innerHTML='<tr><th>No doc. (PDF)</th><th>Preço</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>✅ Meu produto</th></tr>';
+    tbl.appendChild(thead);
+    var tbody=document.createElement('tbody');
+    pdfDados.forEach(function(item,i){
+      var tr=document.createElement('tr');
+      var casado=!!item._prodId;
+      tr.style.background=casado?'#f0fff4':'#fffbf0';
+      // Colunas de dados do PDF
+      var tdNome=document.createElement('td');
+      tdNome.style.cssText='font-size:11px;max-width:160px';
+      tdNome.textContent=item.nomePDF;
+      var tdPreco=document.createElement('td');
+      tdPreco.style.cssText='font-family:monospace;white-space:nowrap';
+      tdPreco.textContent=moeda(item.preco);
+      var tdPrazo=document.createElement('td');
+      tdPrazo.style.cssText='text-align:center';
+      tdPrazo.textContent=item.prazo||'--';
+      var tdDesc=document.createElement('td');
+      tdDesc.style.cssText='text-align:center';
+      tdDesc.textContent=item.desconto?item.desconto+'%':'--';
+      var tdVal=document.createElement('td');
+      tdVal.style.cssText='text-align:center';
+      tdVal.textContent=item.validade||'--';
+      // Coluna produto com autocomplete + status
+      var tdProd=document.createElement('td');
+      tdProd.style.cssText='min-width:220px;position:relative';
+      var statusSpan=document.createElement('span');
+      statusSpan.style.cssText='font-size:11px;margin-bottom:3px;display:block;'+(casado?'color:#27ae60;font-weight:600':'color:#e67e22');
+      statusSpan.textContent=casado?'✅ '+item._prodNome:'⚠️ Não encontrado — busque abaixo';
+      var inp=document.createElement('input');
+      inp.type='text';
+      inp.id='psearch_'+i;
+      inp.placeholder=casado?'Alterar produto...':'Digite para buscar...';
+      inp.value=casado?item._prodNome:'';
+      inp.style.cssText='font-size:12px;padding:5px 6px;width:100%;border:1px solid '+(casado?'#27ae60':'#e67e22')+';border-radius:5px;box-sizing:border-box;margin-top:2px';
+      inp.oninput=(function(idx){return function(){buscarProdPDF(idx,this.value);};})(i);
+      var drop=document.createElement('div');
+      drop.id='pres_'+i;
+      drop.style.cssText='position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:150px;overflow-y:auto;z-index:9999;width:250px;display:none;box-shadow:0 4px 12px rgba(0,0,0,.2)';
+      var hid=document.createElement('input');
+      hid.type='hidden';
+      hid.id='psel_'+i;
+      hid.value=item._prodId||'';
+      tdProd.appendChild(statusSpan);
+      tdProd.appendChild(inp);
+      tdProd.appendChild(drop);
+      tdProd.appendChild(hid);
+      tr.appendChild(tdNome);tr.appendChild(tdPreco);tr.appendChild(tdPrazo);tr.appendChild(tdDesc);tr.appendChild(tdVal);tr.appendChild(tdProd);
+      tbody.appendChild(tr);
+    });
+    tbl.appendChild(tbody);
+    tabEl.appendChild(tbl);
     pvEl.style.display='block';
   }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
 }
@@ -727,9 +790,12 @@ function selecionarProdPDF(i, id, nome){
   var inp=document.getElementById('psearch_'+i);
   var hid=document.getElementById('psel_'+i);
   var res=document.getElementById('pres_'+i);
-  if(inp)inp.value=nome;
+  if(inp){inp.value=nome;inp.style.borderColor='#27ae60';}
   if(hid)hid.value=id;
   if(res)res.style.display='none';
+  // Atualizar status label
+  var tdProd=inp&&inp.parentElement;
+  if(tdProd){var sp=tdProd.querySelector('span');if(sp){sp.style.color='#27ae60';sp.style.fontWeight='600';sp.textContent='✅ '+nome;}}
 }
 async function aplicarPDF(){
   var ap=0;
