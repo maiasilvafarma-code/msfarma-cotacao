@@ -737,13 +737,16 @@ async function processarArquivo(e){
       // Coluna produto com autocomplete + status
       var tdProd=document.createElement('td');
       tdProd.style.cssText='min-width:220px;position:relative';
+      // --- Status label ---
       var statusSpan=document.createElement('span');
-      statusSpan.style.cssText='font-size:11px;margin-bottom:3px;display:block;'+(casado?'color:#27ae60;font-weight:600':'color:#e67e22');
-      statusSpan.textContent=casado?'✅ '+item._prodNome:'⚠️ Não encontrado — busque abaixo';
+      statusSpan.id='pstatus_'+i;
+      statusSpan.style.cssText='font-size:11px;margin-bottom:3px;display:block;font-weight:600;'+(casado?'color:#27ae60':'color:#e67e22');
+      statusSpan.textContent=casado?'✅ '+item._prodNome:'⚠️ Não cadastrado';
+      // --- Input busca ---
       var inp=document.createElement('input');
       inp.type='text';
       inp.id='psearch_'+i;
-      inp.placeholder=casado?'Alterar produto...':'Digite para buscar...';
+      inp.placeholder=casado?'Alterar produto...':'Buscar produto cadastrado...';
       inp.value=casado?item._prodNome:'';
       inp.style.cssText='font-size:12px;padding:5px 6px;width:100%;border:1px solid '+(casado?'#27ae60':'#e67e22')+';border-radius:5px;box-sizing:border-box;margin-top:2px';
       inp.oninput=(function(idx){return function(){buscarProdPDF(idx,this.value);};})(i);
@@ -754,10 +757,29 @@ async function processarArquivo(e){
       hid.type='hidden';
       hid.id='psel_'+i;
       hid.value=item._prodId||'';
+      // --- Botao + Cadastrar (so para nao casados) ---
+      var btnCad=document.createElement('button');
+      btnCad.id='pbtn_'+i;
+      btnCad.textContent='+ Cadastrar novo produto';
+      btnCad.style.cssText='display:'+(casado?'none':'inline-block')+';margin-top:5px;font-size:11px;padding:3px 8px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer';
+      btnCad.onclick=(function(idx,nomePdf){return function(){abrirCadastroRapido(idx,nomePdf);};})(i,item.nomePDF);
+      // --- Mini form cadastro rapido (oculto inicialmente) ---
+      var formCad=document.createElement('div');
+      formCad.id='pform_'+i;
+      formCad.style.cssText='display:none;margin-top:6px;padding:8px;background:#fff8f0;border:1px solid #e67e22;border-radius:6px';
+      formCad.innerHTML='<div style="font-size:11px;font-weight:600;color:#e67e22;margin-bottom:5px">📝 Cadastrar novo produto</div>'
+        +'<input id="pcad_nome_'+i+'" type="text" placeholder="Nome do produto" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px">'
+        +'<input id="pcad_cod_'+i+'" type="text" placeholder="Código de barras (opcional)" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px">'
+        +'<div style="display:flex;gap:5px;justify-content:flex-end">'
+        +'<button onclick="document.getElementById('pform_'+i+'').style.display='none'" style="font-size:11px;padding:3px 8px;background:#eee;border:none;border-radius:4px;cursor:pointer">Cancelar</button>'
+        +'<button onclick="cadastrarEVincular('+i+')" style="font-size:11px;padding:3px 10px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer">✅ Salvar e vincular</button>'
+        +'</div>';
       tdProd.appendChild(statusSpan);
       tdProd.appendChild(inp);
       tdProd.appendChild(drop);
       tdProd.appendChild(hid);
+      tdProd.appendChild(btnCad);
+      tdProd.appendChild(formCad);
       tr.appendChild(tdNome);tr.appendChild(tdPreco);tr.appendChild(tdPrazo);tr.appendChild(tdDesc);tr.appendChild(tdVal);tr.appendChild(tdProd);
       tbody.appendChild(tr);
     });
@@ -767,6 +789,38 @@ async function processarArquivo(e){
   }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
 }
 
+function abrirCadastroRapido(i, nomePdf){
+  var form=document.getElementById('pform_'+i);
+  var nomeCad=document.getElementById('pcad_nome_'+i);
+  if(form){form.style.display='block';}
+  if(nomeCad){
+    // Pre-preenche com o nome do PDF (limpo)
+    nomeCad.value=nomePdf||'';
+    nomeCad.focus();
+    nomeCad.select();
+  }
+}
+async function cadastrarEVincular(i){
+  var nomeInp=document.getElementById('pcad_nome_'+i);
+  var codInp=document.getElementById('pcad_cod_'+i);
+  var nome=(nomeInp&&nomeInp.value.trim())||'';
+  if(!nome){toast('Digite o nome do produto');return;}
+  var novoId=uid();
+  var obj={id:novoId,nome:nome,codigo:codInp?codInp.value.trim():null,unidade:'UN',qtd:1};
+  await saveP(obj);
+  S.produtos.push(obj);
+  // Vincular na linha
+  selecionarProdPDF(i, novoId, nome);
+  // Esconder form e botao cadastrar
+  var form=document.getElementById('pform_'+i);
+  var btn=document.getElementById('pbtn_'+i);
+  if(form)form.style.display='none';
+  if(btn)btn.style.display='none';
+  // Atualizar linha para verde
+  var tr=document.getElementById('psearch_'+i);
+  if(tr&&tr.parentElement&&tr.parentElement.parentElement)tr.parentElement.parentElement.style.background='#f0fff4';
+  toast('✅ Produto cadastrado e vinculado!');
+}
 async function buscarProdPDF(i, termo){
   var res=document.getElementById('pres_'+i);
   if(!res)return;
