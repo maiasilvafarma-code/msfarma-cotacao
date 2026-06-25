@@ -601,7 +601,59 @@ function renderCot(){
   let alertas=[];
   (S.fornecedores||[]).forEach(function(f){(S.produtos||[]).forEach(function(p){var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};if(c.validade){if(vencido(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': preco VENCIDO ('+c.validade+')');else if(proximo(c.validade))alertas.push('<b>'+f.nome+'</b> - '+p.nome+': vence em '+c.validade);}});});
   avEl.innerHTML=alertas.map(function(a){return'<div class="av-box">⏰ '+a+'</div>';}).join('');
-  upEl.innerHTML=(S.fornecedores||[]).map(f=>'<button class="btn btn-outline btn-sm" onclick="abrirUpload(\''+f.id+'\')">📄 PDF/IMG — '+f.nome+'</button>').join('');
+  // Montar botoes com drag & drop
+  upEl.innerHTML='';
+  // Ordenar fornecedores pela ordem salva
+  var ordemSalva=[];try{ordemSalva=JSON.parse(localStorage.getItem('forn_ordem')||'[]');}catch(e){}
+  var fornsOrdenados=(S.fornecedores||[]).slice();
+  if(ordemSalva.length){
+    fornsOrdenados.sort(function(a,b){
+      var ia=ordemSalva.indexOf(a.id),ib=ordemSalva.indexOf(b.id);
+      if(ia===-1)ia=999;if(ib===-1)ib=999;return ia-ib;
+    });
+  }
+  fornsOrdenados.forEach(function(f){
+    var btn=document.createElement('button');
+    btn.className='btn btn-outline btn-sm';
+    btn.draggable=true;
+    btn.dataset.fid=f.id;
+    btn.style.cursor='grab';
+    btn.innerHTML='⠿ 📄 PDF/IMG — '+f.nome;
+    btn.onclick=function(){abrirUpload(f.id);};
+    // Drag events
+    btn.addEventListener('dragstart',function(e){
+      e.dataTransfer.setData('text/plain',f.id);
+      btn.style.opacity='0.4';
+    });
+    btn.addEventListener('dragend',function(){
+      btn.style.opacity='1';
+      document.querySelectorAll('#upload-forn button').forEach(function(b){b.style.background='';});
+    });
+    btn.addEventListener('dragover',function(e){
+      e.preventDefault();
+      btn.style.background='var(--verde-bg)';
+    });
+    btn.addEventListener('dragleave',function(){
+      btn.style.background='';
+    });
+    btn.addEventListener('drop',function(e){
+      e.preventDefault();
+      btn.style.background='';
+      var fromId=e.dataTransfer.getData('text/plain');
+      if(fromId===f.id)return;
+      // Reordenar S.fornecedores
+      var fi=fornsOrdenados.findIndex(function(x){return x.id===fromId;});
+      var ti=fornsOrdenados.findIndex(function(x){return x.id===f.id;});
+      if(fi===-1||ti===-1)return;
+      var moved=fornsOrdenados.splice(fi,1)[0];
+      fornsOrdenados.splice(ti,0,moved);
+      // Salvar ordem
+      localStorage.setItem('forn_ordem',JSON.stringify(fornsOrdenados.map(function(x){return x.id;})));
+      // Re-renderizar botoes
+      renderCot();
+    });
+    upEl.appendChild(btn);
+  });
   function melhor(pid){var c=S.cotacoes[pid]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(f=>{var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return mf;}
   tabEl.innerHTML='<table><thead><tr><th>Produto</th><th>Qtd</th>'+(S.fornecedores||[]).map(f=>'<th class="fh" colspan="4">'+f.nome+'</th>').join('')+'</tr><tr><th></th><th></th>'+(S.fornecedores||[]).map(()=>'<th class="fh" style="font-size:9px">Preco R$</th><th class="fh" style="font-size:9px">Prazo</th><th class="fh" style="font-size:9px">Desc.%</th><th class="fh" style="font-size:9px">Validade</th>').join('')+'</tr></thead><tbody>'+(S.produtos||[]).map(p=>{var mf=melhor(p.id);return'<tr><td class="pn">'+p.nome+'</td><td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:11px">'+p.qtd+'</td>'+(S.fornecedores||[]).map(f=>{var c=(S.cotacoes[p.id]&&S.cotacoes[p.id][f.id])||{};var im=mf===f.id;var venc=vencido(c.validade);var prox=proximo(c.validade);return'<td class="pc '+(im?'mp':'')+'"><input type="number" min="0" step="0.01" value="'+(c.preco||'')+'" placeholder="0,00" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'preco\',this.value)"></td><td class="pz"><input type="text" value="'+(c.prazo||'')+'" placeholder="'+((S.fornecedores||[]).find(x=>x.id===f.id)||{}).prazo+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'prazo\',this.value)"></td><td class="dc"><input type="number" min="0" max="100" step="0.1" value="'+(c.desconto||'')+'" placeholder="0" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'desconto\',this.value)"></td><td class="vd"><input type="date" value="'+(c.validade||'')+'" style="'+(venc?'border-color:var(--erro);color:var(--erro)':prox?'border-color:var(--alerta);color:#92400E':'')+'" onchange="setC(\''+p.id+'\',\''+f.id+'\',\'validade\',this.value)"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
 }
