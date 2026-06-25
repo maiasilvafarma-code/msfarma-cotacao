@@ -257,7 +257,7 @@ td.vd input{width:105px;font-size:12px;}
 
 <!-- MODAL PDF/IMG -->
 <div id="mpdf" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
-  <div class="card" style="width:min(510px,96vw);margin:0;max-height:92vh;overflow-y:auto">
+  <div class="card" style="width:min(920px,97vw);margin:0;max-height:95vh;overflow-y:auto;display:flex;flex-direction:column">
     <div class="card-title">Leitura por IA - <span id="pdfnome" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div class="pdf-zone" onclick="document.getElementById('ipdf').click()" id="pdfzone">
       <div class="pi">📄</div>
@@ -268,7 +268,7 @@ td.vd input{width:105px;font-size:12px;}
     <div id="pdfstatus" style="margin-top:10px;font-size:13px;color:var(--cinza4)"></div>
     <div id="pdfpreview" style="display:none;margin-top:10px">
       <div class="card-title" style="margin-bottom:8px">Dados encontrados</div>
-      <div id="pdftab" class="table-wrap"></div>
+      <div id="pdftab" class="table-wrap" style="overflow-x:auto;overflow-y:auto;max-height:58vh"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn btn-outline" onclick="fecharM('mpdf')">Cancelar</button>
         <button class="btn btn-primary" onclick="aplicarPDF()">Aplicar precos</button>
@@ -696,8 +696,8 @@ async function processarArquivo(e){
     stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>';
     document.getElementById('pdftab').innerHTML='<table><thead><tr><th>No doc.</th><th>Preco</th><th>Prazo</th><th>Desc.</th><th>Validade</th><th>Meu produto (busca)</th></tr></thead><tbody>'+pdfDados.map(function(item,i){
       return'<tr><td style="font-size:11px">'+item.nomePDF+'</td><td style="font-family:monospace">'+moeda(item.preco)+'</td><td style="text-align:center">'+(item.prazo||'--')+'</td><td style="text-align:center">'+(item.desconto?item.desconto+'%':'--')+'</td><td style="text-align:center">'+(item.validade||'--')+'</td>'
-      +'<td><input id="psearch_'+i+'" type="text" placeholder="Digite o nome..." style="font-size:11px;padding:3px;width:180px;border:1px solid #ddd;border-radius:4px" oninput="buscarProdPDF('+i+',this.value)">'
-      +'<div id="pres_'+i+'" style="position:absolute;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:120px;overflow-y:auto;z-index:999;width:200px;display:none"></div>'
+      +'<td><input id="psearch_'+i+'" type="text" placeholder="Digite o nome..." style="font-size:12px;padding:5px 6px;width:210px;border:1px solid #bbb;border-radius:5px" oninput="buscarProdPDF('+i+',this.value)">'
+      +'<div id="pres_'+i+'" style="position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:150px;overflow-y:auto;z-index:9999;width:230px;display:none;box-shadow:0 4px 12px rgba(0,0,0,.2)"></div>'
       +'<input type="hidden" id="psel_'+i+'" value=""></td></tr>';
     }).join('')+'</tbody></table>';
     pvEl.style.display='block';
@@ -711,6 +711,7 @@ async function buscarProdPDF(i, termo){
   var url=SB_URL+'/rest/v1/cotacao_produtos?nome=ilike.*'+encodeURIComponent(termo)+'*&order=nome.asc&limit=10';
   var r=await fetch(url,{headers:SB_H});
   var prods=await r.json();
+  var inp=document.getElementById('psearch_'+i);if(inp){var rect=inp.getBoundingClientRect();res.style.top=(rect.bottom+2)+'px';res.style.left=rect.left+'px';}
   res.innerHTML='';
   if(!Array.isArray(prods)||!prods.length){res.innerHTML='<div style="padding:6px;font-size:11px;color:#999">Nenhum encontrado</div>';res.style.display='block';return;}
   prods.forEach(function(p){
