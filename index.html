@@ -702,7 +702,7 @@ async function processarArquivo(e){
     pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
     // Mapear idxMinha (1-based) para produto real
-    var todosProd=S.produtos||[];
+    var todosProd=todosProdutos||S.produtos||[];
     var mapeados=0,naoMapeados=0;
     pdfDados.forEach(function(item){
       if(item.idxMinha&&item.idxMinha>0){
@@ -886,6 +886,11 @@ async function aplicarPDF(){
     await savePreco(prodId,pdfFornId,dados);ap++;
   }
   fecharM('mpdf');toast(ap+' preco(s) salvos na nuvem!');
+  // Recarregar precos e ir para o comparativo
+  var precos=await sbGet('cotacao_precos','order=updated_at.asc&limit=5000');
+  S.cotacoes={};
+  if(Array.isArray(precos)){precos.forEach(function(p){if(!S.cotacoes[p.produto_id])S.cotacoes[p.produto_id]={};S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};});}
+  abrirTabComparativo();
 }
 
 var dz=document.getElementById('pdfzone');
