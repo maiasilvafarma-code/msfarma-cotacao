@@ -965,14 +965,30 @@ var dz=document.getElementById('pdfzone');
 if(dz){dz.addEventListener('dragover',function(e){e.preventDefault();dz.style.background='var(--verde-bg)';});dz.addEventListener('dragleave',function(){dz.style.background='';});dz.addEventListener('drop',function(e){e.preventDefault();dz.style.background='';var f=e.dataTransfer.files[0];if(f){var dt=new DataTransfer();dt.items.add(f);document.getElementById('ipdf').files=dt.files;processarArquivo({target:{files:[f]}});}});}
 
 // ══ PLACAR ══
+function atualizarQtdCombo(prodId, novaQtd){
+  var qtd=parseInt(novaQtd)||1;
+  var prod=(S.produtos||[]).find(function(p){return p.id===prodId;});
+  if(!prod)return;
+  prod.qtd=qtd;
+  // Atualizar subtotal na linha sem re-renderizar tudo
+  var c=S.cotacoes[prodId]||{};
+  var min=Infinity;
+  (S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min)min=v;});
+  var subEl=document.getElementById('sub_'+prodId);
+  if(subEl&&min<Infinity)subEl.textContent='R$ '+(min*qtd).toFixed(2).replace('.',',');
+  // Salvar no banco
+  saveP(prod);
+}
 function calcularPlacar(){
   var el=document.getElementById('placar');
   if(!(S.fornecedores||[]).length||!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">🏆</div><div class="et">Cadastre dados primeiro.</div></div>';return;}
-  var sc={},tot={};(S.fornecedores||[]).forEach(function(f){sc[f.id]=0;tot[f.id]=0;});var com=0;
-  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
+  var ordemSalva=[];try{ordemSalva=JSON.parse(localStorage.getItem('forn_ordem')||'[]');}catch(e){}
+  var fornsOrd=(S.fornecedores||[]).slice();if(ordemSalva.length){fornsOrd.sort(function(a,b){var ia=ordemSalva.indexOf(a.id),ib=ordemSalva.indexOf(b.id);if(ia===-1)ia=999;if(ib===-1)ib=999;return ia-ib;});}
+  var sc={},tot={};fornsOrd.forEach(function(f){sc[f.id]=0;tot[f.id]=0;});var com=0;
+  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;fornsOrd.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
   if(!com){el.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
   var mx=Math.max(...Object.values(sc));
-  var sorted=[...(S.fornecedores||[])].sort(function(a,b){return sc[b.id]-sc[a.id];});
+  var sorted=[...fornsOrd].sort(function(a,b){return sc[b.id]-sc[a.id];});
   el.innerHTML='<p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Baseado em <strong>'+com+'</strong> produto(s).</p><div class="placar-grid">'+sorted.map(function(f){var ic=sc[f.id]===mx&&mx>0;return'<div class="placar-card '+(ic?'cx':'')+'"><div class="pn2">'+f.nome+'</div><div class="pnum">'+sc[f.id]+'</div><div class="plbl">item(s) mais barato(s)</div>'+(tot[f.id]>0?'<div style="margin-top:5px;font-size:11px;color:var(--cinza4)">Total: '+moeda(tot[f.id])+'</div>':'')+'</div>';}).join('')+'</div><div class="card" style="margin-top:14px;padding:14px"><div class="card-title">Resumo por Produto</div><div class="table-wrap"><table><thead><tr><th>Produto</th>'+(S.fornecedores||[]).map(function(f){return'<th style="text-align:center">'+f.nome+'</th>';}).join('')+'<th>Vencedor</th></tr></thead><tbody>'+(S.produtos||[]).map(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return'<tr><td class="pn">'+p.nome+'</td>'+(S.fornecedores||[]).map(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);var im=mf===f.id;return'<td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:12px;'+(im?'color:var(--verde);font-weight:600':'')+'">'+((!isNaN(v)&&v>0)?moeda(v):'—')+'</td>';}).join('')+'<td style="text-align:center">'+(mf?'<span class="wb">'+((S.fornecedores||[]).find(function(f){return f.id===mf;})||{}).nome+'</span>':'—')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
 }
 
@@ -980,10 +996,12 @@ function calcularPlacar(){
 function calcularCombo(){
   var el=document.getElementById('combo');
   if(!(S.fornecedores||[]).length||!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Cadastre dados e preencha os precos.</div></div>';return;}
-  var totalIdeal=0,totF={};(S.fornecedores||[]).forEach(function(f){totF[f.id]=0;});var linhas=[];
-  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;(S.fornecedores||[]).forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p:p,mf:mf,min:min});}});
+  var ordemSalva=[];try{ordemSalva=JSON.parse(localStorage.getItem('forn_ordem')||'[]');}catch(e){}
+  var fornsOrd=(S.fornecedores||[]).slice();if(ordemSalva.length){fornsOrd.sort(function(a,b){var ia=ordemSalva.indexOf(a.id),ib=ordemSalva.indexOf(b.id);if(ia===-1)ia=999;if(ib===-1)ib=999;return ia-ib;});}
+  var totalIdeal=0,totF={};fornsOrd.forEach(function(f){totF[f.id]=0;});var linhas=[];
+  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;fornsOrd.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p:p,mf:mf,min:min});}});
   if(!linhas.length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
-  var melhorUnico=Math.min(...(S.fornecedores||[]).map(function(f){return totF[f.id];}).filter(function(v){return v>0;}));
+  var melhorUnico=Math.min(...fornsOrd.map(function(f){return totF[f.id];}).filter(function(v){return v>0;}));
   var eco=melhorUnico-totalIdeal;
 
   // ══ ALERTA DE PREÇO ALTO ══
@@ -1026,7 +1044,10 @@ function calcularCombo(){
         +(tel?'<button class="btn btn-green btn-sm" onclick="pedirWppForn(this)" data-tel="'+tel+'" data-txt="'+encodeURIComponent(txtWpp)+'">📲 Pedir via WhatsApp</button>':'')
         +'</div></div>'
         +'<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>'
-        +itens.map(function(x){return'<tr><td class="pn">'+x.p.nome+'</td><td style="text-align:center">'+x.p.qtd+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.min)+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.min*(x.p.qtd||1))+'</td></tr>';}).join('')
+        +itens.map(function(x){return'<tr><td class="pn">'+x.p.nome+'</td>'
+          +'<td style="text-align:center"><input type="number" min="1" value="'+x.p.qtd+'" style="width:55px;text-align:center;font-size:12px;padding:2px 4px;border:1px solid #ddd;border-radius:4px" onchange="atualizarQtdCombo(\''+x.p.id+'\',this.value)"></td>'
+          +'<td style="text-align:right;font-family:monospace">'+moeda(x.min)+'</td>'
+          +'<td style="text-align:right;font-family:monospace" id="sub_'+x.p.id+'">'+moeda(x.min*(x.p.qtd||1))+'</td></tr>';}).join('')
         +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600;padding-top:6px">Total:</td><td style="text-align:right;font-weight:600;color:var(--verde);font-family:monospace;padding-top:6px">'+moeda(totalF)+'</td></tr></tfoot></table>'
         +'</div>';
     }).join('')+'</div>';
