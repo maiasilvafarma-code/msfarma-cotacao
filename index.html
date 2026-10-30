@@ -761,17 +761,7 @@ async function processarArquivo(e){
   } else {
     base64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=function(){rej(new Error('Erro'));};r.readAsDataURL(file);});
   }
-  // Buscar todos os produtos do banco para o mapeamento (não só os 50 iniciais)
-  stEl.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span><b>Carregando lista de produtos...</b></div>';
-  var todosProdutos=[];
-  try{
-    var rp=await fetch(SB_URL+'/rest/v1/cotacao_produtos?order=nome.asc&limit=5000',{headers:{...SB_H,'Prefer':'count=none'}});
-    todosProdutos=await rp.json();
-    if(!Array.isArray(todosProdutos))todosProdutos=S.produtos||[];
-  }catch(e){todosProdutos=S.produtos||[];}
-  stEl.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span><b>Lendo com IA... aguarde</b></div>';
-  var lista=todosProdutos.map(function(p,i){return(i+1)+'. '+p.nome+(p.codigo?' [cod:'+p.codigo+']':'');}).join('\n');
-  var prompt='Voce e um assistente de cotacao de farmacia. Analise este orcamento/pedido farmaceutico e extraia os precos dos produtos.\n\nMinha lista de produtos cadastrados (numero. nome [cod:codigoBarras]):\n'+lista+'\n\nInstrucoes:\n1. Para cada produto do orcamento, encontre o correspondente na minha lista comparando pelo codigo de barras (campo cod:) OU pelo nome similar\n2. Use o preco unitario liquido (apos desconto)\n3. Extraia o prazo de pagamento em dias (numero) se houver\n4. Extraia o percentual de desconto se houver\n5. Extraia o codigo de barras do produto no orcamento se houver\n\nResponda APENAS com JSON valido, sem texto antes ou depois:\n{"itens":[{"nomePDF":"nome exato no pdf","codigoBarras":"codigo de barras do produto","preco":0.00,"prazo":30,"desconto":0,"validade":null,"idxMinha":1}]}\n\nSe nao encontrar correspondencia na minha lista, use idxMinha: null.\nvalidade no formato YYYY-MM-DD ou null.\nNAO inclua texto explicativo, APENAS o JSON.';
+  var prompt='Voce e um assistente de cotacao de farmacia. Analise este orcamento/pedido farmaceutico e extraia TODOS os produtos com preco.\n\nInstrucoes:\n1. nomePDF: nome do produto exatamente como esta no documento\n2. codigoBarras: codigo de barras (EAN, 8 a 14 digitos) se aparecer no documento; se nao aparecer, null. Nunca invente codigo.\n3. preco: preco unitario liquido (apos desconto)\n4. prazo: prazo de pagamento em dias (numero) se houver\n5. desconto: percentual de desconto se houver\n6. validade: validade da oferta no formato YYYY-MM-DD ou null\n\nResponda APENAS com JSON valido, sem texto antes ou depois:\n{"itens":[{"nomePDF":"nome exato no documento","codigoBarras":null,"preco":0.00,"prazo":30,"desconto":0,"validade":null}]}\n\nNAO inclua texto explicativo, APENAS o JSON.';
   try{
     var block=isImg
       ?[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:prompt}]
@@ -788,19 +778,21 @@ async function processarArquivo(e){
     try { parsed=JSON.parse(txt); } catch(e) { stEl.innerHTML='<span style="color:var(--erro)">Erro ao processar resposta da IA</span>';document.getElementById('pdfcancel').style.display='flex';return; }
     pdfDados=parsed.itens||[];
     if(!pdfDados.length){stEl.innerHTML='<span style="color:var(--erro)">Nenhum produto encontrado.</span>';document.getElementById('pdfcancel').style.display='flex';return;}
-    // Mapear idxMinha (1-based) para produto real
-    var todosProd=S.produtos||[];
-    var mapeados=0,naoMapeados=0;
-    pdfDados.forEach(function(item){
-      if(item.idxMinha&&item.idxMinha>0){
-        var prod=todosProd[item.idxMinha-1];
-        if(prod){item._prodId=prod.id;item._prodNome=prod.nome;mapeados++;}
-        else{item._prodId=null;item._prodNome='';naoMapeados++;}
-      } else {item._prodId=null;item._prodNome='';naoMapeados++;}
-    });
-    var casados=mapeados,nao=naoMapeados;
+    // Ligar cada item a um produto cadastrado: pelo codigo de barras ou nome igual; parecido vira sugestao
+    stEl.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;background:var(--verde);border-radius:50%;display:inline-block"></span><b>Ligando aos produtos cadastrados...</b></div>';
+    var porEan=0,porNome=0,porSug=0,nao=0;
+    for(var k=0;k<pdfDados.length;k++){
+      var it=pdfDados[k];
+      var m=null;
+      try{ m=await casarProduto(it); }catch(e){ m=null; }
+      it._sug=null;
+      if(m&&m.via!=='sugestao'){it._prodId=m.prod.id;it._prodNome=m.prod.nome;if(m.via==='ean')porEan++;else porNome++;}
+      else{it._prodId=null;it._prodNome='';if(m){it._sug=m.prod;porSug++;}else nao++;}
+    }
     stEl.innerHTML='<span style="color:var(--verde)">'+pdfDados.length+' item(s) encontrado(s)</span>'
-      +(casados?' &nbsp;✅ <b>'+casados+' casados automaticamente</b>':'')
+      +(porEan?' &nbsp;✅ <b>'+porEan+' pelo código de barras</b>':'')
+      +(porNome?' &nbsp;✅ <b>'+porNome+' pelo nome igual</b>':'')
+      +(porSug?' &nbsp;🔎 <span style="color:#b7791f"><b>'+porSug+' com sugestão para confirmar</b></span>':'')
       +(nao?' &nbsp;⚠️ <span style="color:#e67e22">'+nao+' sem correspondência</span>':'');
     var tabEl=document.getElementById('pdftab');
     tabEl.innerHTML='';
@@ -835,8 +827,8 @@ async function processarArquivo(e){
       // --- Status label ---
       var statusSpan=document.createElement('span');
       statusSpan.id='pstatus_'+i;
-      statusSpan.style.cssText='font-size:11px;margin-bottom:3px;display:block;font-weight:600;'+(casado?'color:#27ae60':'color:#e67e22');
-      statusSpan.textContent=casado?'✅ '+item._prodNome:'⚠️ Não cadastrado';
+      statusSpan.style.cssText='font-size:11px;margin-bottom:3px;display:block;font-weight:600;'+(casado?'color:#27ae60':item._sug?'color:#b7791f':'color:#e67e22');
+      statusSpan.textContent=casado?'✅ '+item._prodNome:item._sug?'🔎 Sugestão: '+item._sug.nome:'⚠️ Não cadastrado';
       // --- Input busca ---
       var inp=document.createElement('input');
       inp.type='text';
@@ -871,6 +863,8 @@ async function processarArquivo(e){
         inpNome.style.cssText='width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px';
         var inpCod=document.createElement('input');
         inpCod.type='text'; inpCod.id='pcad_cod_'+i; inpCod.placeholder='Código de barras (opcional)';
+        var eanLido=String(item.codigoBarras||'').replace(/\D/g,'');
+        inpCod.value=(eanLido.length>=8&&eanLido.length<=14)?eanLido:'';
         inpCod.style.cssText='width:100%;font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:4px';
         var rowBtns=document.createElement('div');
         rowBtns.style.cssText='display:flex;gap:5px;justify-content:flex-end';
@@ -886,6 +880,13 @@ async function processarArquivo(e){
         formCad.appendChild(titDiv); formCad.appendChild(inpNome); formCad.appendChild(inpCod); formCad.appendChild(rowBtns);
       })();
       tdProd.appendChild(statusSpan);
+      if(!casado&&item._sug){
+        var btnSug=document.createElement('button');
+        btnSug.textContent='✅ É este, usar';
+        btnSug.style.cssText='margin:2px 0 4px;font-size:11px;padding:3px 8px;background:#b7791f;color:#fff;border:none;border-radius:4px;cursor:pointer';
+        btnSug.onclick=(function(idx,sp,bt){return function(){selecionarProdPDF(idx,sp.id,sp.nome);bt.style.display='none';var bc=document.getElementById('pbtn_'+idx);if(bc)bc.style.display='none';};})(i,item._sug,btnSug);
+        tdProd.appendChild(btnSug);
+      }
       tdProd.appendChild(inp);
       tdProd.appendChild(drop);
       tdProd.appendChild(hid);
@@ -900,6 +901,55 @@ async function processarArquivo(e){
   }catch(err){stEl.innerHTML='<span style="color:var(--erro)">Erro: '+err.message+'</span>';document.getElementById('pdfcancel').style.display='flex';}
 }
 
+// ══ CASAMENTO ORCAMENTO x PRODUTO CADASTRADO ══
+function normTxt(t){
+  return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+    .replace(/\bS\//g,' SEM ').replace(/(\d),(\d)/g,'$1.$2').replace(/[^A-Z0-9\.]+/g,' ')
+    .replace(/\bC(\d)/g,'C $1').replace(/(\d)(CP|CPR|COMP|CAPS|CAP|UN|UND|UNID|ENV|DOSES)\b/g,'$1 $2')
+    .replace(/(\d)\s+(MG|ML|MCG|G|UI|L|KG)\b/g,'$1$2').trim();
+}
+var _ignorar=['CX','C','COM','DE','DA','DO','E','UN','UND','UNID','FR','CP','CPR','COMP','CAPS','CAP','REV','ENV','X','EMB','DISP'];
+function tokensProd(t){
+  return normTxt(t).split(' ').map(function(x){return x.replace(/^\.+|\.+$/g,'');})
+    .filter(function(x){return x.length>=2&&_ignorar.indexOf(x)<0;});
+}
+function temEanQ(cd){return /^\d{8,14}$/.test(String(cd.codigo||''));}
+async function casarProduto(item){
+  // 1) codigo de barras: liga sozinho
+  var ean=String(item.codigoBarras||'').replace(/\D/g,'');
+  if(ean.length>=8&&ean.length<=14){
+    var r=await fetch(SB_URL+'/rest/v1/cotacao_produtos?codigo=eq.'+ean+'&select=id,nome,codigo&limit=1',{headers:{...SB_H,'Prefer':'count=none'}});
+    var achou=r.ok?await r.json():[];
+    if(Array.isArray(achou)&&achou.length)return{prod:achou[0],via:'ean'};
+  }
+  // 2) nome escrito igual: liga sozinho. Nome equivalente ou parecido: vira SUGESTAO para a pessoa confirmar
+  //    (generico de laboratorio diferente tem nome quase igual e preco diferente)
+  var P=tokensProd(item.nomePDF);
+  if(!P.length)return null;
+  var alvo=P.join(' ');
+  var nomeExato=String(item.nomePDF||'').toUpperCase().replace(/\s+/g,' ').trim();
+  var nums=P.filter(function(x){return /\d/.test(x);});
+  var chaves=P.filter(function(x){return !/\d/.test(x)&&x.length>=4;}).slice(0,2);
+  var melhor=null;
+  for(var c=0;c<chaves.length;c++){
+    var r2=await fetch(SB_URL+'/rest/v1/cotacao_produtos?nome=ilike.*'+encodeURIComponent(chaves[c])+'*&select=id,nome,codigo&limit=300',{headers:{...SB_H,'Prefer':'count=none'}});
+    var cands=r2.ok?await r2.json():[];
+    if(!Array.isArray(cands))continue;
+    for(var j=0;j<cands.length;j++){
+      var cd=cands[j];
+      var Q=tokensProd(cd.nome);
+      // mesmo nome escrito do mesmo jeito (ex.: orcamento repetido do mesmo fornecedor): liga sozinho
+      if(String(cd.nome||'').toUpperCase().replace(/\s+/g,' ').trim()===nomeExato)return{prod:cd,via:'igual'};
+      if(Q.join(' ')===alvo){if(!melhor||melhor.score<1.5||(temEanQ(cd)&&!melhor.temEan))melhor={prod:cd,score:1.5,temEan:temEanQ(cd)};continue;}
+      if(!nums.every(function(n){return Q.indexOf(n)>=0;}))continue;
+      var uniao=P.concat(Q.filter(function(x){return P.indexOf(x)<0;})).length;
+      var score=P.filter(function(x){return Q.indexOf(x)>=0;}).length/uniao;
+      var temEan=/^\d{8,14}$/.test(String(cd.codigo||''));
+      if(score>=0.6&&(!melhor||score>melhor.score||(score===melhor.score&&temEan&&!melhor.temEan)))melhor={prod:cd,score:score,temEan:temEan};
+    }
+  }
+  return melhor?{prod:melhor.prod,via:'sugestao'}:null;
+}
 function abrirCadastroRapido(i, nomePdf){
   var form=document.getElementById('pform_'+i);
   var nomeCad=document.getElementById('pcad_nome_'+i);
