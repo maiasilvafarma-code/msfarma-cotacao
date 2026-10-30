@@ -312,6 +312,40 @@ async function sbGet(table, params) {
   if(!r.ok) return [];
   return r.json();
 }
+// Busca TODAS as linhas, de 1000 em 1000 (o Supabase devolve no maximo 1000 por vez)
+async function sbGetAll(table, params) {
+  const q = params ? '?'+params : '';
+  let todos = [], ini = 0;
+  while (true) {
+    const r = await fetch(SB_URL+'/rest/v1/'+table+q, {headers:{...SB_H,'Range':ini+'-'+(ini+999),'Prefer':'count=none'}});
+    if(!r.ok) throw new Error('Erro ao carregar '+table);
+    const lote = await r.json();
+    if(!Array.isArray(lote)) break;
+    todos = todos.concat(lote);
+    if(lote.length < 1000) break;
+    ini += 1000;
+  }
+  return todos;
+}
+// Lista da cotacao = todos os produtos que tem preco cadastrado, com o preco mais recente de cada fornecedor
+async function carregarCotacao() {
+  const precos = await sbGetAll('cotacao_precos','order=updated_at.asc');
+  S.cotacoes = {};
+  const ids = new Set();
+  precos.forEach(function(p){
+    if(!S.cotacoes[p.produto_id]) S.cotacoes[p.produto_id]={};
+    S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};
+    if(p.preco&&p.preco>0) ids.add(p.produto_id);
+  });
+  const lista = Array.from(ids);
+  let prods = [];
+  for (let i=0; i<lista.length; i+=100) {
+    const lote = await sbGetAll('cotacao_produtos','id=in.('+lista.slice(i,i+100).join(',')+')');
+    prods = prods.concat(lote);
+  }
+  prods.sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR');});
+  S.produtos = prods;
+}
 async function buscarProdutosBanco(termo) {
   const q = termo
     ? '?or=(nome.ilike.*'+encodeURIComponent(termo)+'*,codigo.ilike.*'+encodeURIComponent(termo)+'*)&order=nome.asc&limit=100'
@@ -352,17 +386,7 @@ async function carregarDados() {
     S.fornecedores = Array.isArray(forns) ? forns : [];
     renderForn();
 
-    const prods = await sbGet('cotacao_produtos','order=nome.asc&limit=50');
-    S.produtos = Array.isArray(prods) ? prods : [];
-
-    const precos = await sbGet('cotacao_precos','order=updated_at.asc&limit=500');
-    S.cotacoes = {};
-    if(Array.isArray(precos)) {
-      precos.forEach(p=>{
-        if(!S.cotacoes[p.produto_id]) S.cotacoes[p.produto_id]={};
-        S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};
-      });
-    }
+    await carregarCotacao();
 
     const hist = await sbGet('cotacao_historico','order=created_at.desc');
     S.historico = Array.isArray(hist) ? hist.map(h=>({...h,...h.snapshot})) : [];
@@ -431,28 +455,15 @@ function abrirTab(n,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');el.classList.add('active');
-  if(n==='cotacao'){(async function(){
-  // 1. Buscar precos primeiro (mais rapido - tabela menor)
-  var rpc=await fetch(SB_URL+'/rest/v1/cotacao_precos?order=updated_at.asc&limit=5000',{headers:{...SB_H,'Prefer':'count=none'}});
-  var pcs=await rpc.json();
-  S.cotacoes={};
-  var prodIdsComPreco=new Set();
-  if(Array.isArray(pcs)){pcs.forEach(function(p){
-    if(!S.cotacoes[p.produto_id])S.cotacoes[p.produto_id]={};
-    S.cotacoes[p.produto_id][p.fornecedor_id]={id:p.id,preco:p.preco,prazo:p.prazo,desconto:p.desconto,validade:p.validade};
-    if(p.preco&&p.preco>0)prodIdsComPreco.add(p.produto_id);
-  });}
-  // 2. Buscar só os produtos que têm preço cadastrado
-  if(prodIdsComPreco.size>0){
-    var ids=Array.from(prodIdsComPreco).join(',');
-    var rp=await fetch(SB_URL+'/rest/v1/cotacao_produtos?id=in.('+ids+')&order=nome.asc',{headers:{...SB_H,'Prefer':'count=none'}});
-    var prds=await rp.json();
-    if(Array.isArray(prds)&&prds.length)S.produtos=prds;
-  }
-  renderCot();
-})();}if(n==='placar')calcularPlacar();
+  if(n==='cotacao'||n==='placar'||n==='combo'){(async function(){
+    try{ await carregarCotacao(); setSyncStatus('ok'); }
+    catch(e){ setSyncStatus('err'); toast('Erro ao carregar precos'); }
+    if(n==='cotacao')renderCot();
+    if(n==='placar')calcularPlacar();
+    if(n==='combo')calcularCombo();
+  })();}
   if(n==='produtos')abrirTabProdutos();if(n==='fornecedores')renderForn();
-  if(n==='combo')calcularCombo();if(n==='graficos')renderHist();
+  if(n==='graficos')renderHist();
 }
 
 // ══ FORNECEDORES ══
@@ -537,7 +548,7 @@ function renderForn(){
 // ══ PRODUTOS ══
 function abrirMP(id){
   document.getElementById('pid').value=id||'';
-  if(id){const p=(S.produtos||[]).find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;document.getElementById('pqtdpadrao').value=p.qtdpadrao||'';}
+  if(id){const p=(S.busca||[]).find(x=>x.id===id)||(S.produtos||[]).find(x=>x.id===id);document.getElementById('pnome').value=p.nome;document.getElementById('pcodigo').value=p.codigo||'';document.getElementById('punid').value=p.unidade||'CX';document.getElementById('pqtd').value=p.qtd||1;document.getElementById('pqtdpadrao').value=p.qtdpadrao||'';}
   else{['pnome','pcodigo'].forEach(x=>document.getElementById(x).value='');document.getElementById('punid').value='CX';document.getElementById('pqtd').value=1;document.getElementById('pqtdpadrao').value='';}
   abrirM('mprod');setTimeout(()=>document.getElementById('pnome').focus(),80);
 }
@@ -546,13 +557,15 @@ async function salvarP(){
   const id=document.getElementById('pid').value||uid();
   const qtdpadrao=parseInt(document.getElementById('pqtdpadrao').value)||null;
   const obj={id,nome,codigo:document.getElementById('pcodigo').value.trim(),unidade:document.getElementById('punid').value,qtd:parseInt(document.getElementById('pqtd').value)||1,qtdpadrao:qtdpadrao};
-  const i=S.produtos.findIndex(x=>x.id===id);if(i>=0)S.produtos[i]=obj;else S.produtos.push(obj);
+  if(!S.busca)S.busca=[];
+  const i=S.produtos.findIndex(x=>x.id===id);if(i>=0)S.produtos[i]=obj;
+  const j=S.busca.findIndex(x=>x.id===id);if(j>=0)S.busca[j]=obj;else if(i<0)S.busca.push(obj);
   renderProd();fecharM('mprod');
   await saveP(obj);toast('Produto salvo na nuvem');
 }
 async function excluirP(id){
   if(!confirm('Remover produto?'))return;
-  S.produtos=(S.produtos||[]).filter(x=>x.id!==id);delete S.cotacoes[id];
+  S.produtos=(S.produtos||[]).filter(x=>x.id!==id);S.busca=(S.busca||[]).filter(x=>x.id!==id);delete S.cotacoes[id];
   renderProd();setSyncStatus('sync');
   await sbDelete('cotacao_produtos',id);
   setSyncStatus('ok');toast('Removido');
@@ -568,7 +581,7 @@ async function buscarNoBanco(termo){
   clearTimeout(_prodBuscaTimer);
   _prodBuscaTimer=setTimeout(async function(){
     const res = await buscarProdutosBanco(termo);
-    S.produtos = Array.isArray(res)?res:[];
+    S.busca = Array.isArray(res)?res:[];
     _prodPage=0;
     renderProd();
   }, 300);
@@ -577,10 +590,10 @@ var _prodPage=0;var _prodPageSize=100;
 function renderProd(resetPage){
   if(resetPage)_prodPage=0;
   var el=document.getElementById("lista-prod");
-  if(!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto.</div></div>';return;}
+  if(!(S.busca||[]).length){el.innerHTML='<div class="empty"><div class="ei">📦</div><div class="et">Nenhum produto.</div></div>';return;}
   var buscaEl=document.getElementById("busca-prod");
   var busca=buscaEl?buscaEl.value.toLowerCase().trim():"";
-  var sorted=[...(S.produtos||[])].sort(function(a,b){return a.nome.localeCompare(b.nome,"pt-BR");});
+  var sorted=[...(S.busca||[])].sort(function(a,b){return a.nome.localeCompare(b.nome,"pt-BR");});
   var filtrado=sorted;
   if(!filtrado.length){el.innerHTML='<div class="empty"><div class="ei">🔍</div><div class="et">Nenhum encontrado.</div></div>';return;}
   var total=filtrado.length;
@@ -635,9 +648,10 @@ async function importarCSV(e){
     for(const l of linhas){
       const p=l.split(/[,;\t]/);let nome,codigo='';
       if(p.length>=2){codigo=p[0].trim();nome=p[1].trim();}else nome=p[0].trim();
-      if(nome&&!(S.produtos||[]).find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
+      if(!S.busca)S.busca=[];
+      if(nome&&![...(S.produtos||[]),...S.busca].find(x=>x.nome.toLowerCase()===nome.toLowerCase())){
         const obj={id:uid(),nome,codigo,unidade:'CX',qtd:1};
-        S.produtos.push(obj);await saveP(obj);added++;
+        S.busca.push(obj);await saveP(obj);added++;
       }
     }
     renderProd();toast(added+' produto(s) importado(s)!');e.target.value='';
