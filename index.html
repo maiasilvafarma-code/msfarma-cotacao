@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="MS Cotacao">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--verde:#1A6B4A;--verde2:#22885F;--verde-bg:#EAF4EF;--amarelo:#F5C842;--cinza1:#F7F8F7;--cinza2:#E8ECEB;--cinza3:#B0BAB7;--cinza4:#6B7876;--preto:#1A1E1D;--branco:#FFFFFF;--erro:#D94F3D;--alerta:#F59E0B;--sombra:0 2px 12px rgba(26,107,74,.10);}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -143,6 +144,7 @@ td.vd input{width:105px;font-size:12px;}
   <div class="tab active" onclick="abrirTab('fornecedores',this)">👥 Fornecedores</div>
   <div class="tab" onclick="abrirTab('produtos',this)">📦 Produtos</div>
   <div class="tab" onclick="abrirTab('cotacao',this)">📊 Comparativo</div>
+  <div class="tab" onclick="abrirTab('pedido',this)">🛒 Pedido do dia</div>
   <div class="tab" onclick="abrirTab('placar',this)">🏆 Placar</div>
   <div class="tab" onclick="abrirTab('combo',this)">💡 Combo Ideal</div>
   <div class="tab" onclick="abrirTab('graficos',this)">📈 Histórico</div>
@@ -198,6 +200,25 @@ td.vd input{width:105px;font-size:12px;}
   </div>
 </div>
 
+<div id="panel-pedido" class="panel">
+  <div class="card">
+    <div class="sr"><div class="st">Pedido do dia</div></div>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor do dia e carregue a lista do pedido (planilha do Claude ou código de barras;quantidade por linha). O item fica com o fornecedor do dia, a não ser que outro seja mais barato acima do percentual definido.</p>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label>Fornecedor do dia</label><select id="pd-forn"></select></div>
+      <div class="form-group"><label>Economia mínima para trocar (%)</label><input id="pd-pct" type="number" min="0" step="0.5" value="5"></div>
+      <div class="form-group" style="grid-column:1/-1"><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" id="pd-ts" checked style="width:auto"> Desempate para a TS: se a TS estiver até esse percentual mais cara, o item vai para ela (prazo médio maior)</label></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Planilha do pedido (.xlsx / .csv)</label><input id="pd-arq" type="file" accept=".xlsx,.xls,.csv,.txt" onchange="lerArquivoPedido(event)"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Ou cole a lista (código de barras;quantidade)</label><textarea id="pd-lista" rows="5" placeholder="7896004714196;3&#10;7891317452971;2" style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid var(--cinza2);border-radius:6px;box-sizing:border-box"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-primary" onclick="montarPedido()">🛒 Montar pedido</button>
+    </div>
+    <div id="pd-status" style="font-size:12px;margin-top:10px"></div>
+    <div id="pd-result" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <div id="panel-graficos" class="panel">
   <div class="card">
     <div class="sr"><div class="st">Historico de Cotacoes</div>
@@ -225,6 +246,10 @@ td.vd input{width:105px;font-size:12px;}
       <div class="form-group"><label>WhatsApp 1</label><input id="ftel" placeholder="(85) 99999-9999"></div>
       <div class="form-group"><label>WhatsApp 2</label><input id="ftel2" placeholder="(85) 99999-9999"></div>
       <div class="form-group" style="grid-column:1/-1"><label>Prazo padrao</label><input id="fprazo" type="search" autocomplete="off" placeholder="ex: 30/60/90" style="appearance:none;-webkit-appearance:none;"></div>
+      <div class="form-group"><label>Categoria</label><input id="fcat" placeholder="ex: Medicamentos"></div>
+      <div class="form-group"><label>Dias de pedido</label><input id="fdias" placeholder="ex: 10 e 24"></div>
+      <div class="form-group"><label>Pedido mínimo (R$)</label><input id="fmin" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="form-group"><label>Valor máximo por pedido (R$)</label><input id="fmax" type="number" min="0" step="0.01" placeholder="0,00"></div>
       <div class="form-group" style="grid-column:1/-1"><label>Observacao</label><input id="fobs" placeholder="ex: Entrega toda segunda"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
@@ -404,7 +429,7 @@ async function carregarDados() {
 // ══ SAVE HELPERS ══
 async function saveF(obj) {
   setSyncStatus('sync');
-  try { await sbUpsert('cotacao_fornecedores',{id:obj.id,nome:obj.nome,contato:obj.contato||null,contato2:obj.contato2||null,prazo:obj.prazo||null,obs:obj.obs||null}); setSyncStatus('ok'); }
+  try { await sbUpsert('cotacao_fornecedores',{id:obj.id,nome:obj.nome,contato:obj.contato||null,contato2:obj.contato2||null,prazo:obj.prazo||null,obs:obj.obs||null,categoria:obj.categoria||null,dias_pedido:obj.dias_pedido||null,pedido_minimo:obj.pedido_minimo||null,valor_maximo:obj.valor_maximo||null}); setSyncStatus('ok'); }
   catch(e){setSyncStatus('err');}
 }
 async function saveP(obj) {
@@ -455,6 +480,7 @@ function abrirTab(n,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');el.classList.add('active');
+  if(n==='pedido')prepararPedido();
   if(n==='cotacao'||n==='placar'||n==='combo'){(async function(){
     try{ await carregarCotacao(); setSyncStatus('ok'); }
     catch(e){ setSyncStatus('err'); toast('Erro ao carregar precos'); }
@@ -469,14 +495,14 @@ function abrirTab(n,el){
 // ══ FORNECEDORES ══
 function abrirMF(id){
   document.getElementById('fid').value=id||'';
-  if(id){const f=(S.fornecedores||[]).find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('ftel2').value=f.contato2||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';}
-  else{['fnome','ftel','ftel2','fprazo','fobs'].forEach(x=>document.getElementById(x).value='');}
+  if(id){const f=(S.fornecedores||[]).find(x=>x.id===id);document.getElementById('fnome').value=f.nome;document.getElementById('ftel').value=f.contato||'';document.getElementById('ftel2').value=f.contato2||'';document.getElementById('fprazo').value=f.prazo||'';document.getElementById('fobs').value=f.obs||'';document.getElementById('fcat').value=f.categoria||'';document.getElementById('fdias').value=f.dias_pedido||'';document.getElementById('fmin').value=f.pedido_minimo||'';document.getElementById('fmax').value=f.valor_maximo||'';}
+  else{['fnome','ftel','ftel2','fprazo','fobs','fcat','fdias','fmin','fmax'].forEach(x=>document.getElementById(x).value='');}
   abrirM('mforn');setTimeout(()=>document.getElementById('fnome').focus(),80);
 }
 async function salvarF(){
   const nome=document.getElementById('fnome').value.trim();if(!nome){toast('Informe o nome');return;}
   const id=document.getElementById('fid').value||uid();
-  const obj={id,nome,contato:document.getElementById('ftel').value.trim(),contato2:document.getElementById('ftel2').value.trim(),prazo:document.getElementById('fprazo').value,obs:document.getElementById('fobs').value.trim()};
+  const obj={id,nome,contato:document.getElementById('ftel').value.trim(),contato2:document.getElementById('ftel2').value.trim(),prazo:document.getElementById('fprazo').value,obs:document.getElementById('fobs').value.trim(),categoria:document.getElementById('fcat').value.trim(),dias_pedido:document.getElementById('fdias').value.trim(),pedido_minimo:parseFloat(document.getElementById('fmin').value)||null,valor_maximo:parseFloat(document.getElementById('fmax').value)||null};
   const i=S.fornecedores.findIndex(x=>x.id===id);if(i>=0)S.fornecedores[i]=obj;else S.fornecedores.push(obj);
   renderForn();fecharM('mforn');
   await saveF(obj);toast('Fornecedor salvo na nuvem');
@@ -515,6 +541,9 @@ function renderForn(){
     card.appendChild(tit);
     if(f.contato){var ct=document.createElement('div');ct.className='fd';ct.textContent='📞 '+f.contato+(f.contato2?' / '+f.contato2:'');card.appendChild(ct);}
     if(f.prazo){var pr=document.createElement('div');pr.className='fd';pr.textContent='📅 '+f.prazo+' dias';card.appendChild(pr);}
+    if(f.categoria){var ca=document.createElement('div');ca.className='fd';ca.textContent='🏷 '+f.categoria;card.appendChild(ca);}
+    if(f.dias_pedido){var dp=document.createElement('div');dp.className='fd';dp.textContent='🗓 Pedido: dias '+f.dias_pedido;card.appendChild(dp);}
+    if(f.pedido_minimo||f.valor_maximo){var mm=document.createElement('div');mm.className='fd';mm.textContent='💰 '+(f.pedido_minimo?'mín. '+moeda(f.pedido_minimo):'')+(f.pedido_minimo&&f.valor_maximo?' · ':'')+(f.valor_maximo?'máx. '+moeda(f.valor_maximo):'');card.appendChild(mm);}
     if(f.obs){var ob=document.createElement('div');ob.className='fd';ob.textContent='💬 '+f.obs;card.appendChild(ob);}
     var fa=document.createElement('div');fa.className='fa';
     var btnEd=document.createElement('button');btnEd.className='btn btn-outline btn-xs';btnEd.textContent='✏ Editar';
@@ -1122,6 +1151,122 @@ function calcularCombo(){
 function irParaComparativo(){
   var tab=document.querySelectorAll('.tab')[2];
   if(tab)tab.click();
+}
+// ══ PEDIDO DO DIA ══
+function prepararPedido(){
+  var sel=document.getElementById('pd-forn');if(!sel)return;
+  var atual=sel.value;
+  var hojeDia=new Date().getDate();
+  var sugerido=(S.fornecedores||[]).find(function(f){return (f.dias_pedido||'').match(/\d+/g)&&(f.dias_pedido.match(/\d+/g)||[]).map(Number).indexOf(hojeDia)>=0;});
+  sel.innerHTML=(S.fornecedores||[]).map(function(f){return '<option value="'+f.id+'">'+f.nome+(f.dias_pedido?' (dias '+f.dias_pedido+')':'')+'</option>';}).join('');
+  if(atual)sel.value=atual;else if(sugerido)sel.value=sugerido.id;
+}
+function lerArquivoPedido(e){
+  var file=e.target.files[0];if(!file)return;
+  var st=document.getElementById('pd-status');
+  var r=new FileReader();
+  r.onload=function(ev){
+    try{
+      var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+      var hi=-1,ce=-1,cq=-1;
+      for(var i=0;i<Math.min(rows.length,30)&&hi<0;i++){
+        rows[i].forEach(function(c,j){var t=String(c).toUpperCase();if(ce<0&&/EAN|C[OÓ]D.*BARRA|BARRAS/.test(t))ce=j;if(/^PEDIR$|QTD|QUANT/.test(t.trim()))cq=j;});
+        if(ce>=0&&cq>=0)hi=i;else{ce=-1;cq=-1;}
+      }
+      if(hi<0){st.innerHTML='<span style="color:var(--erro)">Não achei as colunas de código de barras e quantidade (PEDIR/Qtd).</span>';return;}
+      var linhas=[],conferir=0;
+      for(var k=hi+1;k<rows.length;k++){
+        var ean=String(rows[k][ce]||'').replace(/\D/g,'');var q=rows[k][cq];
+        if(!ean)continue;
+        if(String(q).toLowerCase().indexOf('conferir')>=0){conferir++;continue;}
+        q=parseFloat(String(q).replace(',','.'));if(!(q>0))continue;
+        linhas.push(ean+';'+q);
+      }
+      document.getElementById('pd-lista').value=linhas.join('\n');
+      st.innerHTML='<span style="color:var(--verde)">'+linhas.length+' item(s) com quantidade carregados.</span>'+(conferir?' <span style="color:#b7791f">'+conferir+' ainda sem contagem de prateleira ("conferir") ficaram de fora.</span>':'');
+    }catch(err){st.innerHTML='<span style="color:var(--erro)">Erro ao ler a planilha: '+err.message+'</span>';}
+  };
+  r.readAsArrayBuffer(file);
+}
+async function montarPedido(){
+  var st=document.getElementById('pd-status'),out=document.getElementById('pd-result');
+  var fdia=document.getElementById('pd-forn').value;
+  var pct=(parseFloat(document.getElementById('pd-pct').value)||0)/100;
+  var usarTS=document.getElementById('pd-ts').checked;
+  var ts=(S.fornecedores||[]).find(function(f){return /\bTS\b/i.test(f.nome);});
+  var itens={};
+  document.getElementById('pd-lista').value.split(/\n+/).forEach(function(l){
+    var p=l.split(/[;,\t ]+/);var ean=String(p[0]||'').replace(/\D/g,'');var q=parseFloat(String(p[1]||'1').replace(',','.'))||1;
+    if(ean)itens[ean]=(itens[ean]||0)+q;
+  });
+  var eans=Object.keys(itens);
+  if(!eans.length){st.innerHTML='<span style="color:var(--erro)">Carregue a planilha ou cole a lista.</span>';return;}
+  st.innerHTML='Carregando preços...';
+  try{await carregarCotacao();}catch(e){st.innerHTML='<span style="color:var(--erro)">Erro ao carregar preços.</span>';return;}
+  // produtos da base pelo código de barras (com e sem zeros à esquerda)
+  var porEan={};
+  var buscar=[];eans.forEach(function(e){buscar.push(e);var z=e.replace(/^0+/,'');if(z!==e)buscar.push(z);if(e.length<13)buscar.push(('0000000000000'+e).slice(-13));});
+  for(var i=0;i<buscar.length;i+=100){
+    var lote=await sbGetAll('cotacao_produtos','codigo=in.('+buscar.slice(i,i+100).join(',')+')&select=id,nome,codigo');
+    lote.forEach(function(p){var k=String(p.codigo||'').replace(/\D/g,'').replace(/^0+/,'');(porEan[k]=porEan[k]||[]).push(p);});
+  }
+  var grupos={},semPreco=[],naoAchado=[];
+  eans.forEach(function(ean){
+    var cands=porEan[ean.replace(/^0+/,'')]||[];
+    if(!cands.length){naoAchado.push(ean);return;}
+    // usa o cadastro que tem preço (se houver mais de um com o mesmo código)
+    var prod=cands.find(function(p){return S.cotacoes[p.id]&&Object.keys(S.cotacoes[p.id]).length;})||cands[0];
+    var c=S.cotacoes[prod.id]||{};
+    var precos=Object.keys(c).map(function(fid){return{fid:fid,v:parseFloat(c[fid].preco),prazo:c[fid].prazo};}).filter(function(x){return x.v>0;});
+    if(!precos.length){semPreco.push(prod.nome+' ('+ean+')');return;}
+    var dia=precos.find(function(x){return x.fid===fdia;});
+    var melhor=precos.slice().sort(function(a,b){return a.v-b.v;})[0];
+    var escolha,motivo;
+    if(dia){
+      if(melhor.fid!==fdia&&melhor.v<dia.v*(1-pct)){escolha=melhor;motivo=Math.round((1-melhor.v/dia.v)*100)+'% mais barato que o fornecedor do dia';}
+      else{escolha=dia;motivo='fornecedor do dia';}
+      if(usarTS&&ts&&fdia!==ts.id&&escolha.fid===fdia){var t=precos.find(function(x){return x.fid===ts.id;});if(t&&t.v<=dia.v*(1+pct)){escolha=t;motivo='desempate TS (prazo maior)';}}
+    }else{escolha=melhor;motivo='fornecedor do dia sem preço';}
+    (grupos[escolha.fid]=grupos[escolha.fid]||[]).push({prod:prod,ean:ean,q:itens[ean],v:escolha.v,prazo:escolha.prazo,motivo:motivo,dia:dia?dia.v:null});
+  });
+  // grupo de outro fornecedor abaixo do pedido mínimo volta para o fornecedor do dia (quando ele tem preço)
+  var voltaram=0;
+  Object.keys(grupos).forEach(function(fid){
+    if(fid===fdia)return;
+    var f=(S.fornecedores||[]).find(function(x){return x.id===fid;})||{};
+    var tot=grupos[fid].reduce(function(s,x){return s+x.v*x.q;},0);
+    if(f.pedido_minimo&&tot<f.pedido_minimo){
+      grupos[fid]=grupos[fid].filter(function(x){
+        if(x.dia){(grupos[fdia]=grupos[fdia]||[]).push(Object.assign({},x,{v:x.dia,motivo:'voltou: '+f.nome+' não fecha o mínimo'}));voltaram++;return false;}
+        return true;});
+      if(!grupos[fid].length)delete grupos[fid];
+    }
+  });
+  var ordem=Object.keys(grupos).sort(function(a,b){return a===fdia?-1:b===fdia?1:0;});
+  var totalGeral=0;
+  var html=ordem.map(function(fid){
+    var f=(S.fornecedores||[]).find(function(x){return x.id===fid;})||{nome:'?'};
+    var its=grupos[fid];var tot=its.reduce(function(s,x){return s+x.v*x.q;},0);totalGeral+=tot;
+    var avisos=[];
+    if(f.valor_maximo&&tot>f.valor_maximo)avisos.push('⚠️ Passa do valor máximo ('+moeda(f.valor_maximo)+')');
+    if(f.pedido_minimo&&tot<f.pedido_minimo)avisos.push('⚠️ Abaixo do pedido mínimo ('+moeda(f.pedido_minimo)+')');
+    var tel=f.contato?f.contato.replace(/\D/g,''):'';
+    var txt='Olá, '+f.nome+'!\n\nSegue o PEDIDO DE COMPRA da *MS Farma*:\n\n'+its.map(function(x,i){return(i+1)+'. '+x.prod.nome+' ('+x.ean+') — Qtd: '+x.q;}).join('\n')+'\n\n*Total estimado: '+moeda(tot)+'*\n\nObrigada!';
+    return '<div style="border:1px solid var(--cinza2);border-radius:10px;padding:12px;margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><div style="font-weight:600;color:var(--verde)">'+f.nome+(fid===fdia?' <span style="font-size:11px;color:var(--cinza4)">(fornecedor do dia)</span>':'')+'</div>'
+      +'<div style="display:flex;gap:6px">'+(tel?'<button class="btn btn-green btn-sm" onclick="pedirWppForn(this)" data-tel="'+tel+'" data-txt="'+encodeURIComponent(txt)+'">📲 WhatsApp</button>':'')
+      +'<button class="btn btn-outline btn-sm" data-txt="'+encodeURIComponent(txt)+'" onclick="navigator.clipboard.writeText(decodeURIComponent(this.dataset.txt));toast(\'Pedido copiado\')">📋 Copiar</button></div></div>'
+      +(avisos.length?'<div style="font-size:12px;color:#92400E;background:#FEF3C7;border-radius:6px;padding:6px 8px;margin-bottom:6px">'+avisos.join('<br>')+'</div>':'')
+      +'<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th>Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th><th style="text-align:left">Por quê</th></tr></thead><tbody>'
+      +its.map(function(x){return'<tr><td class="pn">'+x.prod.nome+'</td><td style="text-align:center">'+x.q+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v)+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v*x.q)+'</td><td style="font-size:11px;color:var(--cinza4)">'+x.motivo+(x.prazo?' · prazo '+x.prazo:'')+'</td></tr>';}).join('')
+      +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600">Total</td><td style="text-align:right;font-weight:600;font-family:monospace;color:var(--verde)">'+moeda(tot)+'</td><td></td></tr></tfoot></table></div></div>';
+  }).join('');
+  if(semPreco.length)html+='<div style="font-size:12px;margin-top:6px"><b>Sem preço em nenhum fornecedor ('+semPreco.length+'):</b> '+semPreco.join(' · ')+'</div>';
+  if(naoAchado.length)html+='<div style="font-size:12px;margin-top:6px"><b>Código de barras não cadastrado na cotação ('+naoAchado.length+'):</b> '+naoAchado.join(', ')+'</div>';
+  out.innerHTML=html;
+  st.innerHTML='<b>Total do pedido: '+moeda(totalGeral)+'</b> em '+ordem.length+' fornecedor(es)'+(voltaram?' · '+voltaram+' item(s) voltaram para o fornecedor do dia por causa do pedido mínimo':'');
 }
 function pedirWppForn(btn){
   var tel=btn.getAttribute('data-tel').replace(/\D/g,'');
