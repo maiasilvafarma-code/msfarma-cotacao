@@ -1397,6 +1397,25 @@ function recalcVenc(i){
   el.innerHTML=a.html;
 }
 
+// ══ PREÇO DE VENDA DA LOJA (só para conferir; o preço é decidido no projeto Preços e Campanhas) ══
+var PVLOJA=null;
+async function carregarPVLoja(){
+  try{
+    var r=await fetch(SB_URL+'/rest/v1/farmacia_config?chave=eq.cotacao-preco-venda&select=valor',{headers:{...SB_H,'Prefer':'count=none'}});
+    var j=r.ok?await r.json():[];var v=j[0]&&j[0].valor;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){v=null;}}
+    PVLOJA=v&&v.itens?v:{itens:{}};
+  }catch(e){PVLOJA={itens:{}};}
+  return PVLOJA;
+}
+function margemLoja(ean,custo){
+  var it=PVLOJA&&PVLOJA.itens&&PVLOJA.itens[String(ean||'').replace(/\D/g,'').replace(/^0+/,'')];
+  if(!it||!(it[0]>0))return '<span style="color:var(--cinza4)">—</span>';
+  var pv=it[0],k=it[2]||1,mg=(pv-custo*k)/pv,d=it[1]?_br(it[1]):'';
+  if(mg<-0.5)return moeda(pv)+'<br><span style="font-size:10px;color:#92400E">conferir fração</span>';
+  var cor=mg<0.20?'#9C0006':mg<0.30?'#92400E':'#1B7A3D';
+  return moeda(pv)+'<br><span style="font-size:10px;font-weight:600;color:'+cor+'">'+(mg*100).toFixed(0)+'%</span>'+(d?'<span style="font-size:10px;color:var(--cinza4)"> · '+d+'</span>':'');
+}
+
 // ══ PEDIDO DO DIA ══
 function prepararPedido(){
   var sel=document.getElementById('pd-forn');if(!sel)return;
@@ -1453,6 +1472,7 @@ async function montarPedido(){
   st.innerHTML='Carregando preços e boletos...';
   try{await carregarCotacao();}catch(e){st.innerHTML='<span style="color:var(--erro)">Erro ao carregar preços.</span>';return;}
   await carregarAgenda(true);
+  await carregarPVLoja();
   var dataPed=document.getElementById('pd-data').value||hoje();
   // produtos da base pelo código de barras (com e sem zeros à esquerda)
   var porEan={};
@@ -1512,9 +1532,9 @@ async function montarPedido(){
       +'<div style="display:flex;gap:6px">'+(tel?'<button class="btn btn-green btn-sm" onclick="pedirWppForn(this)" data-tel="'+tel+'" data-txt="'+encodeURIComponent(txt)+'">📲 WhatsApp</button>':'')
       +'<button class="btn btn-outline btn-sm" data-txt="'+encodeURIComponent(txt)+'" onclick="navigator.clipboard.writeText(decodeURIComponent(this.dataset.txt));toast(\'Pedido copiado\')">📋 Copiar</button></div></div>'
       +(avisos.length?'<div style="font-size:12px;color:#92400E;background:#FEF3C7;border-radius:6px;padding:6px 8px;margin-bottom:6px">'+avisos.join('<br>')+'</div>':'')
-      +'<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th>Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th><th style="text-align:left">Por quê</th></tr></thead><tbody>'
-      +its.map(function(x){return'<tr><td class="pn">'+x.prod.nome+'</td><td style="text-align:center">'+x.q+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v)+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v*x.q)+'</td><td style="font-size:11px;color:var(--cinza4)">'+x.motivo+(x.rot?' · '+(x.velho?'<b style="color:#92400E">⚠ '+x.rot+' (mais de 60 dias)</b>':x.rot):'')+(x.prazo?' · prazo '+x.prazo:'')+'</td></tr>';}).join('')
-      +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600">Total</td><td style="text-align:right;font-weight:600;font-family:monospace;color:var(--verde)">'+moeda(tot)+'</td><td></td></tr></tfoot></table></div>'
+      +'<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th>Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th><th style="text-align:right" title="Preço praticado na loja e margem com o custo deste pedido">Venda loja · margem</th><th style="text-align:left">Por quê</th></tr></thead><tbody>'
+      +its.map(function(x){return'<tr><td class="pn">'+x.prod.nome+'</td><td style="text-align:center">'+x.q+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v)+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v*x.q)+'</td><td style="text-align:right;font-family:monospace;font-size:11px">'+margemLoja(x.ean,x.v)+'</td><td style="font-size:11px;color:var(--cinza4)">'+x.motivo+(x.rot?' · '+(x.velho?'<b style="color:#92400E">⚠ '+x.rot+' (mais de 60 dias)</b>':x.rot):'')+(x.prazo?' · prazo '+x.prazo:'')+'</td></tr>';}).join('')
+      +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600">Total</td><td style="text-align:right;font-weight:600;font-family:monospace;color:var(--verde)">'+moeda(tot)+'</td><td></td><td></td></tr></tfoot></table></div>'
       +'<div style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:12px"><label>Prazo deste pedido:</label><input id="pd-prazo-'+gi+'" value="'+prazoSug+'" style="width:160px;font-size:12px;padding:3px 6px" onchange="recalcVenc('+gi+')"><span style="color:var(--cinza4)">(confirme com o representante)</span></div>'
       +'<div id="pd-venc-'+gi+'" data-total="'+tot+'">'+an.html+'</div></div>';
   }).join('');
