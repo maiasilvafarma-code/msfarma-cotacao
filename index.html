@@ -202,7 +202,7 @@ td.vd input{width:105px;font-size:12px;}
 <div id="panel-combo" class="panel">
   <div class="card">
     <div class="sr"><div class="st">Combinacao Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
-    <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">Qual fornecedor comprar cada produto para ter a maior economia total.</p>
+    <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">De quem comprar cada produto pelas regras da loja: o mais barato, a não ser que a TS esteja até 5% acima (empate vai para a TS, que dá o prazo maior).</p>
     <div id="combo"></div>
   </div>
 </div>
@@ -1103,68 +1103,107 @@ function calcularPlacar(){
 }
 
 // ══ COMBO IDEAL ══
-function calcularCombo(){
+// Quem ganha cada produto pelas regras de compra da MS Farma:
+// mais barato, a não ser que a TS esteja até X% acima (empate vai para a TS, prazo maior).
+// Marca preço com mais de 60 dias e preço de orçamento (pode não ter ST). Não é pedido: quantidade vem do Pedido do dia.
+var COMBO={linhas:[],filtroF:''};
+async function calcularCombo(){
   var el=document.getElementById('combo');
   if(!(S.fornecedores||[]).length||!(S.produtos||[]).length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Cadastre dados e preencha os precos.</div></div>';return;}
-  var ordemSalva=[];try{ordemSalva=JSON.parse(localStorage.getItem('forn_ordem')||'[]');}catch(e){}
-  var fornsOrd=(S.fornecedores||[]).slice();if(ordemSalva.length){fornsOrd.sort(function(a,b){var ia=ordemSalva.indexOf(a.id),ib=ordemSalva.indexOf(b.id);if(ia===-1)ia=999;if(ib===-1)ib=999;return ia-ib;});}
-  var totalIdeal=0,totF={};fornsOrd.forEach(function(f){totF[f.id]=0;});var linhas=[];
-  (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;fornsOrd.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){if(v<min){min=v;mf=f.id;}totF[f.id]+=(v*(p.qtd||1));}});if(mf){totalIdeal+=min*(p.qtd||1);linhas.push({p:p,mf:mf,min:min});}});
-  if(!linhas.length){el.innerHTML='<div class="empty"><div class="ei">💡</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
-  var melhorUnico=Math.min(...fornsOrd.map(function(f){return totF[f.id];}).filter(function(v){return v>0;}));
-  var eco=melhorUnico-totalIdeal;
-
-  // ══ ALERTA DE PREÇO ALTO ══
-  // Compara o MESMO fornecedor, na MESMA base (nota com nota, orçamento com orçamento).
-  // Nota traz imposto (ST); orçamento muitas vezes não — comparar os dois dá aumento falso.
+  if(!PVLOJA)await carregarPVLoja();
+  var pct=(parseFloat((document.getElementById('cb-pct')||{}).value)||5)/100;
+  var usarTS=(document.getElementById('cb-ts')||{checked:true}).checked;
+  var semVelho=(document.getElementById('cb-velho')||{checked:false}).checked;
+  var ts=(S.fornecedores||[]).find(function(f){return /\bTS\b/i.test(f.nome);});
+  var F={};(S.fornecedores||[]).forEach(function(f){F[f.id]=f;});
+  var linhas=[];
+  (S.produtos||[]).forEach(function(p){
+    var c=S.cotacoes[p.id]||{};
+    var todos=Object.keys(c).filter(function(fid){return F[fid];}).map(function(fid){var x=c[fid];return{fid:fid,v:parseFloat(x.preco),nota:x.origem==='nota',velho:precoVelho(x),rot:rotuloOrigem(x),prazo:x.prazo};}).filter(function(x){return x.v>0;});
+    if(!todos.length)return;
+    var cands=semVelho?todos.filter(function(x){return !x.velho;}):todos;
+    if(!cands.length)cands=todos;
+    cands.sort(function(a,b){return a.v-b.v;});
+    var min=cands[0],esc=min,motivo='mais barato';
+    if(usarTS&&ts&&min.fid!==ts.id){var t=cands.find(function(x){return x.fid===ts.id;});if(t&&t.v<=min.v*(1+pct)){esc=t;motivo='empate até '+Math.round(pct*100)+'% → TS (prazo maior)';}}
+    var outros=cands.filter(function(x){return x.fid!==esc.fid;});
+    var seg=outros[0]||null;
+    var temNota=todos.some(function(x){return x.nota;});
+    var alertas=[];
+    if(esc.velho)alertas.push('velho');
+    if(!esc.nota&&temNota)alertas.push('base');
+    linhas.push({p:p,esc:esc,seg:seg,motivo:motivo,alertas:alertas,n:todos.length});
+  });
+  COMBO.linhas=linhas;
+  // alerta de preço alto: mesmo fornecedor, mesma base, contra a foto salva mais recente
   var alertasPreco=[],dataSnap='';
   if(S.historico&&S.historico.length&&S.historico[0].snapshot){
     var snapAnt=S.historico[0].snapshot||{};dataSnap=S.historico[0].data||'';
     var precosAnt=snapAnt.cotacoes||{};
     linhas.forEach(function(x){
-      var atual=(S.cotacoes[x.p.id]||{})[x.mf]||{};
-      var ant=(precosAnt[x.p.id]||{})[x.mf];
+      var atual=(S.cotacoes[x.p.id]||{})[x.esc.fid]||{};
+      var ant=(precosAnt[x.p.id]||{})[x.esc.fid];
       if(!ant)return;
-      var baseAt=atual.origem==='nota'?'nota':'orcamento',baseAnt=ant.origem==='nota'?'nota':'orcamento';
-      if(baseAt!==baseAnt)return;
+      if((atual.origem==='nota')!==(ant.origem==='nota'))return;
       var va=parseFloat(ant.preco),vn=parseFloat(atual.preco);
       if(!(va>0)||!(vn>0))return;
       var diff=((vn-va)/va)*100;
-      if(diff>=10)alertasPreco.push({nome:x.p.nome,ant:va,atual:vn,diff:diff});
+      if(diff>=10)alertasPreco.push({nome:x.p.nome,f:F[x.esc.fid].nome,ant:va,atual:vn,diff:diff});
     });
   }
-  var alertaHtml=alertasPreco.length?'<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:12px;margin-bottom:14px"><div style="font-weight:600;color:#92400E;margin-bottom:8px">⚠️ Alertas de Preço Alto <span style="font-weight:400;font-size:11px">(mesmo fornecedor e mesma base, comparado ao histórico salvo em '+(dataSnap?dataSnap.split('-').reverse().join('/'):'—')+')</span></div>'+alertasPreco.map(function(a){return'<div style="font-size:12px;color:#92400E;padding:3px 0">📈 <b>'+a.nome+'</b>: era '+moeda(a.ant)+' → agora '+moeda(a.atual)+' <span style="color:var(--erro);font-weight:600">(+'+a.diff.toFixed(0)+'%)</span></div>';}).join('')+'</div>':'';
-
-  // ══ PEDIDO POR FORNECEDOR ══
-  var pedidosPorForn={};
-  linhas.forEach(function(x){
-    if(!pedidosPorForn[x.mf])pedidosPorForn[x.mf]=[];
-    pedidosPorForn[x.mf].push(x);
+  var dias=dataSnap?Math.round((Date.now()-new Date(dataSnap+'T12:00:00'))/86400000):null;
+  var alertaHtml='<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#92400E">'
+    +'<div style="font-weight:600;margin-bottom:4px">⚠️ Preço que subiu 10% ou mais <span style="font-weight:400">(mesmo fornecedor, mesma base, contra a foto de '+(dataSnap?dataSnap.split('-').reverse().join('/'):'—')+(dias!==null?', há '+dias+' dias':'')+')</span></div>'
+    +(alertasPreco.length?alertasPreco.sort(function(a,b){return b.diff-a.diff;}).map(function(a){return'<div style="padding:2px 0">📈 <b>'+a.nome+'</b> ('+a.f+'): '+moeda(a.ant)+' → '+moeda(a.atual)+' <b>+'+a.diff.toFixed(0)+'%</b></div>';}).join(''):'<div>Nenhum aumento de 10% ou mais desde a foto.</div>')
+    +(dias===null||dias>15?'<div style="margin-top:6px">A foto está antiga. Para acompanhar os aumentos daqui em diante, salve uma nova: <button class="btn btn-outline btn-xs" onclick="salvarHistorico()">📷 Salvar foto de hoje</button></div>':'')
+    +'</div>';
+  el.innerHTML=alertaHtml
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:12px;margin-bottom:10px">'
+    +'<label>Empate até <input id="cb-pct" type="number" min="0" step="0.5" value="'+Math.round(pct*1000)/10+'" style="width:55px;font-size:12px;padding:2px 4px" onchange="calcularCombo()"> %</label>'
+    +'<label><input id="cb-ts" type="checkbox" '+(usarTS?'checked':'')+' onchange="calcularCombo()"> empate vai para a TS</label>'
+    +'<label><input id="cb-velho" type="checkbox" '+(semVelho?'checked':'')+' onchange="calcularCombo()"> não usar preço com mais de 60 dias</label>'
+    +'<input id="cb-busca" placeholder="🔎 buscar produto ou código" style="flex:1;min-width:180px;font-size:12px;padding:4px 8px" oninput="renderCombo()">'
+    +'<select id="cb-alerta" style="font-size:12px" onchange="renderCombo()"><option value="">todos</option><option value="velho">só preço velho</option><option value="base">só orçamento contra nota</option><option value="margem">só margem abaixo de 30%</option></select>'
+    +'</div><div id="cb-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div><div id="cb-tab"></div>';
+  renderCombo();
+}
+function _margemNum(ean,custo){
+  var it=PVLOJA&&PVLOJA.itens&&PVLOJA.itens[String(ean||'').replace(/\D/g,'').replace(/^0+/,'')];
+  if(!it||!(it[0]>0))return null;var mg=(it[0]-custo*(it[2]||1))/it[0];return mg<-0.5?null:mg;
+}
+function renderCombo(){
+  var L=COMBO.linhas||[],F={};(S.fornecedores||[]).forEach(function(f){F[f.id]=f;});
+  var busca=normTxt((document.getElementById('cb-busca')||{}).value||'');
+  var tipo=(document.getElementById('cb-alerta')||{}).value||'';
+  var cont={};L.forEach(function(x){cont[x.esc.fid]=(cont[x.esc.fid]||0)+1;});
+  var nV=L.filter(function(x){return x.alertas.indexOf('velho')>=0;}).length,nB=L.filter(function(x){return x.alertas.indexOf('base')>=0;}).length;
+  document.getElementById('cb-chips').innerHTML='<span style="font-size:12px;color:var(--cinza4);align-self:center">'+L.length+' produtos · '+nV+' com preço velho · '+nB+' orçamento contra nota · ganha:</span>'
+    +['<button class="btn btn-xs '+(COMBO.filtroF===''?'btn-primary':'btn-outline')+'" onclick="COMBO.filtroF=\'\';renderCombo()">todos</button>']
+    .concat(Object.keys(cont).sort(function(a,b){return cont[b]-cont[a];}).map(function(fid){return'<button class="btn btn-xs '+(COMBO.filtroF===fid?'btn-primary':'btn-outline')+'" onclick="COMBO.filtroF=\''+fid+'\';renderCombo()">'+F[fid].nome+' '+cont[fid]+'</button>';})).join('');
+  var vis=L.filter(function(x){
+    if(COMBO.filtroF&&x.esc.fid!==COMBO.filtroF)return false;
+    if(busca&&normTxt(x.p.nome+' '+(x.p.codigo||'')).indexOf(busca)<0)return false;
+    if(tipo==='velho'&&x.alertas.indexOf('velho')<0)return false;
+    if(tipo==='base'&&x.alertas.indexOf('base')<0)return false;
+    if(tipo==='margem'){var m=_margemNum(x.p.codigo,x.esc.v);if(m===null||m>=0.30)return false;}
+    return true;
   });
-  var pedidoHtml='<div style="margin-top:18px"><div style="font-weight:600;font-size:13px;color:var(--cinza4);text-transform:uppercase;margin-bottom:10px">📋 Pedido por Fornecedor</div>'+
-    Object.keys(pedidosPorForn).map(function(fid){
-      var f=(S.fornecedores||[]).find(function(ff){return ff.id===fid;})||{};
-      var itens=pedidosPorForn[fid];
-      var totalF=itens.reduce(function(s,x){return s+x.min*(x.p.qtd||1);},0);
-      var tel=f.contato?(f.contato.replace(/\D/g,'')):'';
-      var lista=itens.map(function(x,i){return(i+1)+'. '+x.p.nome+' — Qtd: '+x.p.qtd+' '+x.p.unidade+' — '+moeda(x.min)+'/un';}).join('\n');
-      var txtWpp='Ola, '+f.nome+'!\n\nSegue o PEDIDO DE COMPRA da *MS Farma*:\n\n'+lista+'\n\n*Total: '+moeda(totalF)+'*\n\nObrigada!';
-      return'<div style="border:1px solid var(--cinza2);border-radius:10px;padding:12px;margin-bottom:10px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-        +'<div style="font-weight:600;color:var(--verde)">'+f.nome+'</div>'
-        +'<div style="display:flex;gap:6px">'
-        +(tel?'<button class="btn btn-green btn-sm" onclick="pedirWppForn(this)" data-tel="'+tel+'" data-txt="'+encodeURIComponent(txtWpp)+'">📲 Pedir via WhatsApp</button>':'')
-        +'</div></div>'
-        +'<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>'
-        +itens.map(function(x){return'<tr><td class="pn">'+x.p.nome+'</td>'
-          +'<td style="text-align:center"><input type="number" min="1" value="'+x.p.qtd+'" style="width:55px;text-align:center;font-size:12px;padding:2px 4px;border:1px solid #ddd;border-radius:4px" onchange="atualizarQtdCombo(\''+x.p.id+'\',this.value)"></td>'
-          +'<td style="text-align:right;font-family:monospace">'+moeda(x.min)+'</td>'
-          +'<td style="text-align:right;font-family:monospace" id="sub_'+x.p.id+'">'+moeda(x.min*(x.p.qtd||1))+'</td></tr>';}).join('')
-        +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600;padding-top:6px">Total:</td><td style="text-align:right;font-weight:600;color:var(--verde);font-family:monospace;padding-top:6px">'+moeda(totalF)+'</td></tr></tfoot></table>'
-        +'</div>';
-    }).join('')+'</div>';
-
-  el.innerHTML=alertaHtml+'<div style="background:var(--verde-bg);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap"><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Total Ideal</div><div style="font-size:22px;font-weight:600;color:var(--verde);font-family:\'DM Mono\',monospace">'+moeda(totalIdeal)+'</div></div>'+(eco>0?'<div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Economia vs Único Fornecedor</div><div style="font-size:22px;font-weight:600;color:#059669;font-family:\'DM Mono\',monospace">+ '+moeda(eco)+'</div></div><div><div style="font-size:10px;color:var(--cinza4);text-transform:uppercase">Você economiza</div><div style="font-size:13px;font-weight:600;color:#059669;padding-top:4px">'+(eco/melhorUnico*100).toFixed(1)+'% comprando no combo ideal</div></div>':'')+'</div>'+linhas.map(function(x){var f=(S.fornecedores||[]).find(function(ff){return ff.id===x.mf;});return'<div class="combo-row"><div class="cp1">'+x.p.nome+' <span style="color:var(--cinza3);font-size:11px">x '+x.p.qtd+'</span></div><span class="wb">'+(f?f.nome:'')+'</span><div class="cp3">'+moeda(x.min)+'</div><div class="cp4">subtotal '+moeda(x.min*(x.p.qtd||1))+'</div></div>';}).join('')+pedidoHtml;
+  var MAX=400;
+  document.getElementById('cb-tab').innerHTML='<div class="table-wrap" style="max-height:65vh;overflow:auto"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th style="text-align:left">Comprar em</th><th style="text-align:right">Preço</th><th style="text-align:left">2º colocado</th><th style="text-align:right">Venda loja · margem</th><th style="text-align:left">Atenção</th></tr></thead><tbody>'
+    +vis.slice(0,MAX).map(function(x){
+      var e=x.esc,sg=x.seg,dif=sg?((sg.v-e.v)/e.v*100):null;
+      var at=[];
+      if(x.alertas.indexOf('velho')>=0)at.push('<b style="color:#92400E">⚠ preço com mais de 60 dias: confirmar</b>');
+      if(x.alertas.indexOf('base')>=0)at.push('<span style="color:#92400E">orçamento contra nota: pode estar sem ST</span>');
+      return'<tr><td class="pn">'+x.p.nome+(x.p.codigo?'<br><span style="font-size:10px;color:var(--cinza4)">'+x.p.codigo+'</span>':'')+'</td>'
+        +'<td><b>'+F[e.fid].nome+'</b><br><span style="font-size:10px;color:var(--cinza4)">'+x.motivo+(e.prazo?' · '+e.prazo:'')+'</span></td>'
+        +'<td style="text-align:right;font-family:monospace">'+moeda(e.v)+'<br><span style="font-size:10px;color:var(--cinza4)">'+(e.rot||'')+'</span></td>'
+        +'<td style="font-size:11px">'+(sg?F[sg.fid].nome+' '+moeda(sg.v)+' <span style="color:var(--cinza4)">('+(dif>=0?'+':'')+dif.toFixed(1)+'%)</span>':'<span style="color:var(--cinza4)">só 1 fornecedor</span>')+'</td>'
+        +'<td style="text-align:right;font-family:monospace;font-size:11px">'+margemLoja(x.p.codigo,e.v)+'</td>'
+        +'<td style="font-size:11px">'+at.join('<br>')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'
+    +(vis.length>MAX?'<div style="font-size:12px;color:var(--cinza4);margin-top:6px">Mostrando '+MAX+' de '+vis.length+'. Use a busca ou os filtros.</div>':'')
+    +'<p style="font-size:11px;color:var(--cinza4);margin-top:8px">Para fazer o pedido, com quantidade, pedido mínimo e os vencimentos no limite de R$ 2.000 por dia, use a aba 🛒 Pedido do dia.</p>';
 }
 
 function irParaComparativo(){
