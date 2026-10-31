@@ -135,24 +135,20 @@ td.vd input{width:105px;font-size:12px;}
   </div>
   <div class="header-actions">
     <div class="sync-status"><div class="sync-dot" id="sdot"></div><span id="stxt">nuvem</span></div>
-    <button class="btn btn-green btn-sm" onclick="enviarWhatsApp()">📲</button>
     <button class="btn btn-yellow btn-sm" onclick="exportarExcel()">⬇ Excel</button>
   </div>
 </header>
 
 <div class="tabs">
-  <div class="tab active" onclick="abrirTab('fornecedores',this)">👥 Fornecedores</div>
-  <div class="tab" onclick="abrirTab('produtos',this)">📦 Produtos</div>
-  <div class="tab" onclick="abrirTab('cotacao',this)">📊 Comparativo</div>
-  <div class="tab" onclick="abrirTab('pedido',this)">🛒 Pedido do dia</div>
-  <div class="tab" onclick="abrirTab('placar',this)">🏆 Placar</div>
-  <div class="tab" onclick="abrirTab('combo',this)">💡 Combo Ideal</div>
-  <div class="tab" onclick="abrirTab('graficos',this)">📈 Histórico</div>
+  <div class="tab active" onclick="abrirTab('pedido',this)">🛒 Pedido do dia</div>
+  <div class="tab" onclick="abrirTab('cotacao',this)">📥 Lançar preços</div>
+  <div class="tab" onclick="abrirTab('combo',this)">💡 Quem vende mais barato</div>
+  <div class="tab" onclick="abrirTab('cadastros',this)">⚙️ Cadastros</div>
 </div>
 
 <main>
 <div id="lembrete-cotacao"></div>
-<div id="panel-fornecedores" class="panel active">
+<div id="panel-fornecedores" class="panel">
   <div class="card">
     <div class="sr"><div class="st">Fornecedores</div><button class="btn btn-primary btn-sm" onclick="abrirMF()">+ Adicionar</button></div>
     <div id="lista-forn"></div>
@@ -179,7 +175,7 @@ td.vd input{width:105px;font-size:12px;}
 
 <div id="panel-cotacao" class="panel">
   <div class="card">
-    <div class="sr"><div class="st">Comparativo de Preços</div><span class="ai-badge"><span class="ai-dot"></span> IA ativa</span></div>
+    <div class="sr"><div class="st">Lançar preços (orçamento e nota)</div><span class="ai-badge"><span class="ai-dot"></span> IA ativa</span></div>
     <div id="av"></div>
     <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Suba o PDF, PNG ou JPG do orçamento — a IA extrai os preços automaticamente.</p>
     <div id="upload-forn" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
@@ -201,13 +197,13 @@ td.vd input{width:105px;font-size:12px;}
 
 <div id="panel-combo" class="panel">
   <div class="card">
-    <div class="sr"><div class="st">Combinacao Ideal</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
+    <div class="sr"><div class="st">Quem vende mais barato</div><button class="btn btn-outline btn-sm" onclick="calcularCombo()">↻ Calcular</button></div>
     <p style="font-size:12px;color:var(--cinza4);margin-bottom:14px">De quem comprar cada produto pelas regras da loja: o mais barato, a não ser que a TS esteja até 5% acima (empate vai para a TS, que dá o prazo maior).</p>
     <div id="combo"></div>
   </div>
 </div>
 
-<div id="panel-pedido" class="panel">
+<div id="panel-pedido" class="panel active">
   <div class="card">
     <div class="sr"><div class="st">Pedido do dia</div></div>
     <p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Escolha o fornecedor do dia e carregue a lista do pedido (planilha do Claude ou código de barras;quantidade por linha). O item fica com o fornecedor do dia, a não ser que outro seja mais barato acima do percentual definido.</p>
@@ -419,6 +415,7 @@ async function carregarDados() {
     const forns = await sbGet('cotacao_fornecedores','order=created_at.asc');
     S.fornecedores = Array.isArray(forns) ? forns : [];
     renderForn();
+    try{prepararPedido();}catch(e){}
 
     await carregarCotacao();
 
@@ -495,7 +492,10 @@ function proximo(d){if(!d)return false;const df=(new Date(d)-new Date())/8640000
 function abrirTab(n,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('panel-'+n).classList.add('active');el.classList.add('active');
+  if(n==='cadastros'){document.getElementById('panel-fornecedores').classList.add('active');document.getElementById('panel-produtos').classList.add('active');}
+  else document.getElementById('panel-'+n).classList.add('active');
+  el.classList.add('active');
+  if(n==='cadastros'){renderForn();abrirTabProdutos();}
   if(n==='pedido')prepararPedido();
   if(n==='cotacao'||n==='placar'||n==='combo'){(async function(){
     try{ await carregarCotacao(); setSyncStatus('ok'); }
@@ -1096,7 +1096,7 @@ function calcularPlacar(){
   var fornsOrd=(S.fornecedores||[]).slice();if(ordemSalva.length){fornsOrd.sort(function(a,b){var ia=ordemSalva.indexOf(a.id),ib=ordemSalva.indexOf(b.id);if(ia===-1)ia=999;if(ib===-1)ib=999;return ia-ib;});}
   var sc={},tot={};fornsOrd.forEach(function(f){sc[f.id]=0;tot[f.id]=0;});var com=0;
   (S.produtos||[]).forEach(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;fornsOrd.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0){tot[f.id]+=v*(p.qtd||1);if(v<min){min=v;mf=f.id;}}});if(mf){sc[mf]++;com++;}});
-  if(!com){el.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Preencha os precos no Comparativo.</div></div>';return;}
+  if(!com){el.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">Lance os preços na aba 📥 Lançar preços.</div></div>';return;}
   var mx=Math.max(...Object.values(sc));
   var sorted=[...fornsOrd].sort(function(a,b){return sc[b.id]-sc[a.id];});
   el.innerHTML='<p style="font-size:12px;color:var(--cinza4);margin-bottom:12px">Baseado em <strong>'+com+'</strong> produto(s).</p><div class="placar-grid">'+sorted.map(function(f){var ic=sc[f.id]===mx&&mx>0;return'<div class="placar-card '+(ic?'cx':'')+'"><div class="pn2">'+f.nome+'</div><div class="pnum">'+sc[f.id]+'</div><div class="plbl">item(s) mais barato(s)</div>'+(tot[f.id]>0?'<div style="margin-top:5px;font-size:11px;color:var(--cinza4)">Total: '+moeda(tot[f.id])+'</div>':'')+'</div>';}).join('')+'</div><div class="card" style="margin-top:14px;padding:14px"><div class="card-title">Resumo por Produto</div><div class="table-wrap"><table><thead><tr><th>Produto</th>'+fornsOrd.map(function(f){return'<th style="text-align:center">'+f.nome+'</th>';}).join('')+'<th>Vencedor</th></tr></thead><tbody>'+(S.produtos||[]).map(function(p){var c=S.cotacoes[p.id]||{};var min=Infinity,mf=null;fornsOrd.forEach(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);if(!isNaN(v)&&v>0&&v<min){min=v;mf=f.id;}});return'<tr><td class="pn">'+p.nome+'</td>'+fornsOrd.map(function(f){var v=parseFloat(c[f.id]&&c[f.id].preco);var im=mf===f.id;return'<td style="text-align:center;font-family:\'DM Mono\',monospace;font-size:12px;'+(im?'color:var(--verde);font-weight:600':'')+'">'+((!isNaN(v)&&v>0)?moeda(v):'—')+'</td>';}).join('')+'<td style="text-align:center">'+(mf?'<span class="wb">'+((S.fornecedores||[]).find(function(f){return f.id===mf;})||{}).nome+'</span>':'—')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
@@ -1208,7 +1208,7 @@ function renderCombo(){
 }
 
 function irParaComparativo(){
-  var tab=document.querySelectorAll('.tab')[2];
+  var tab=[].find.call(document.querySelectorAll('.tab'),function(t){return /Lançar preços/.test(t.textContent);});
   if(tab)tab.click();
 }
 // ══ LIGAR ORÇAMENTOS SEM CÓDIGO DE BARRAS ══
