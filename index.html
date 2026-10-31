@@ -214,6 +214,8 @@ td.vd input{width:105px;font-size:12px;}
     <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px">
       <div class="form-group"><label>Fornecedor do dia</label><select id="pd-forn"></select></div>
       <div class="form-group"><label>Economia mínima para trocar (%)</label><input id="pd-pct" type="number" min="0" step="0.5" value="5"></div>
+      <div class="form-group"><label>Data do pedido (para calcular os vencimentos)</label><input id="pd-data" type="date"></div>
+      <div class="form-group"><label>Limite de boletos por dia (R$) — do sistema de gestão</label><input id="pd-lim" type="number" min="0" step="50" placeholder="2000"></div>
       <div class="form-group" style="grid-column:1/-1"><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" id="pd-ts" checked style="width:auto"> Desempate para a TS: se a TS estiver até esse percentual mais cara, o item vai para ela (prazo médio maior)</label></div>
       <div class="form-group" style="grid-column:1/-1"><label>Planilha do pedido (.xlsx / .csv)</label><input id="pd-arq" type="file" accept=".xlsx,.xls,.csv,.txt" onchange="lerArquivoPedido(event)"></div>
       <div class="form-group" style="grid-column:1/-1"><label>Ou cole a lista (código de barras;quantidade)</label><textarea id="pd-lista" rows="5" placeholder="7896004714196;3&#10;7891317452971;2" style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid var(--cinza2);border-radius:6px;box-sizing:border-box"></textarea></div>
@@ -1338,9 +1340,66 @@ async function aplicarXML(){
   try{await carregarCotacao();renderCot();}catch(e){}
 }
 
+// ══ AGENDA DE BOLETOS (sistema de gestão) ══
+var AGENDA=null;
+async function carregarAgenda(forcar){
+  if(AGENDA&&!forcar)return AGENDA;
+  var fin=null,prev={},lim=2000,fonte='';
+  try{fin=JSON.parse(localStorage.getItem('farmacia-fin-v2')||'null');if(fin)fonte='este computador';}catch(e){}
+  try{prev=JSON.parse(localStorage.getItem('farmacia-boletos-previstos')||'{}')||{};}catch(e){}
+  try{var l=parseFloat(localStorage.getItem('farmacia-limite-dia'));if(l>0)lim=l;}catch(e){}
+  if(!fin){
+    try{
+      var r=await fetch(SB_URL+'/rest/v1/farmacia_config?chave=in.(farmacia-fin-v2,farmacia-boletos-previstos,farmacia-limite-dia)&select=chave,valor',{headers:{...SB_H,'Prefer':'count=none'}});
+      var rows=r.ok?await r.json():[];
+      rows.forEach(function(x){var v=x.valor;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){}}
+        if(x.chave==='farmacia-fin-v2'){fin=v;fonte='nuvem';}
+        if(x.chave==='farmacia-boletos-previstos'&&v&&typeof v==='object')prev=v;
+        if(x.chave==='farmacia-limite-dia'&&parseFloat(v)>0)lim=parseFloat(v);});
+    }catch(e){}
+  }
+  var dia={};
+  ((fin&&fin.boletos)||[]).forEach(function(b){if(b.paid||!b.due)return;dia[b.due]=(dia[b.due]||0)+(parseFloat(b.val)||0);});
+  AGENDA={dia:dia,prev:prev,limite:lim,fonte:fonte,ok:!!fin};
+  return AGENDA;
+}
+function _addDias(iso,n){var d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+function _br(iso){var p=iso.split('-');return p[2]+'/'+p[1];}
+function _prevValor(txt){var m=String(txt||'').match(/VALOR DE\s*([\d\.]+,\d{2}|[\d\.]+)/i);if(!m)return 0;return parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0;}
+function analisarParcelas(total,prazoTxt,dataPed){
+  var A=AGENDA||{dia:{},prev:{},limite:2000};
+  var lim=parseFloat(document.getElementById('pd-lim').value)||A.limite||2000;
+  var dias=String(prazoTxt||'').split(/[^\d]+/).map(Number).filter(function(n){return n>0;});
+  if(!dias.length)return{html:'<div style="font-size:11px;color:var(--cinza4)">Informe o prazo (ex.: 30/40/50/60/70) para ver os vencimentos.</div>',estoura:false,cabe:null};
+  var parc=total/dias.length,estoura=false,menorFolga=Infinity;
+  var linhas=dias.map(function(d){
+    var dt=_addDias(dataPed,d),ja=(A.dia[dt]||0),nota=A.prev[dt]||'',pv=_prevValor(nota);
+    var bloqueado=/N[AÃ]O PEDIR/i.test(nota);
+    var base=ja+pv,depois=base+parc,folga=bloqueado?0:Math.max(0,lim-base);
+    if(folga<menorFolga)menorFolga=folga;
+    var st,cor;
+    if(bloqueado){st='🚫 dia bloqueado';cor='#9C0006';estoura=true;}
+    else if(depois>lim){st='⚠ passa '+moeda(depois-lim);cor='#9C0006';estoura=true;}
+    else if(depois>lim*0.9){st='atenção';cor='#92400E';}
+    else{st='ok';cor='#1B7A3D';}
+    return'<tr><td>'+_br(dt)+'</td><td style="text-align:right">'+moeda(ja)+(pv?'<br><span style="font-size:10px;color:#92400E">+ previsto '+moeda(pv)+'</span>':'')+'</td><td style="text-align:right">'+moeda(parc)+'</td><td style="text-align:right;font-weight:600">'+moeda(depois)+'</td><td style="color:'+cor+';font-weight:600">'+st+(nota?'<br><span style="font-size:10px;font-weight:400;color:var(--cinza4)">'+nota+'</span>':'')+'</td></tr>';
+  }).join('');
+  var cabe=menorFolga===Infinity?null:menorFolga*dias.length;
+  return{estoura:estoura,cabe:cabe,html:'<div style="margin-top:8px"><div style="font-size:12px;font-weight:600;margin-bottom:4px">Vencimentos no sistema de gestão (limite '+moeda(lim)+'/dia)</div>'
+    +'<table style="width:100%;font-size:11px"><thead><tr><th style="text-align:left">Dia</th><th style="text-align:right">Já tem</th><th style="text-align:right">Esta parcela</th><th style="text-align:right">Fica</th><th style="text-align:left">Situação</th></tr></thead><tbody>'+linhas+'</tbody></table>'
+    +'<div style="font-size:12px;margin-top:4px;color:'+(estoura?'#9C0006':'#1B7A3D')+'">'+(estoura?'❌ Este pedido estoura o caixa. Com este prazo, cabe até <b>'+moeda(cabe)+'</b>, ou peça mais parcelas / 1ª parcela mais tarde.':'✅ Cabe no caixa. Com este prazo, caberia até '+moeda(cabe)+'.')+'</div></div>'};
+}
+function recalcVenc(i){
+  var el=document.getElementById('pd-venc-'+i);if(!el)return;
+  var a=analisarParcelas(parseFloat(el.dataset.total),document.getElementById('pd-prazo-'+i).value,document.getElementById('pd-data').value||hoje());
+  el.innerHTML=a.html;
+}
+
 // ══ PEDIDO DO DIA ══
 function prepararPedido(){
   var sel=document.getElementById('pd-forn');if(!sel)return;
+  var dt=document.getElementById('pd-data');if(dt&&!dt.value)dt.value=hoje();
+  carregarAgenda().then(function(a){var l=document.getElementById('pd-lim');if(l&&!l.value)l.value=a.limite;});
   var atual=sel.value;
   var hojeDia=new Date().getDate();
   var sugerido=(S.fornecedores||[]).find(function(f){return (f.dias_pedido||'').match(/\d+/g)&&(f.dias_pedido.match(/\d+/g)||[]).map(Number).indexOf(hojeDia)>=0;});
@@ -1389,8 +1448,10 @@ async function montarPedido(){
   });
   var eans=Object.keys(itens);
   if(!eans.length){st.innerHTML='<span style="color:var(--erro)">Carregue a planilha ou cole a lista.</span>';return;}
-  st.innerHTML='Carregando preços...';
+  st.innerHTML='Carregando preços e boletos...';
   try{await carregarCotacao();}catch(e){st.innerHTML='<span style="color:var(--erro)">Erro ao carregar preços.</span>';return;}
+  await carregarAgenda(true);
+  var dataPed=document.getElementById('pd-data').value||hoje();
   // produtos da base pelo código de barras (com e sem zeros à esquerda)
   var porEan={};
   var buscar=[];eans.forEach(function(e){buscar.push(e);var z=e.replace(/^0+/,'');if(z!==e)buscar.push(z);if(e.length<13)buscar.push(('0000000000000'+e).slice(-13));});
@@ -1432,9 +1493,13 @@ async function montarPedido(){
   });
   var ordem=Object.keys(grupos).sort(function(a,b){return a===fdia?-1:b===fdia?1:0;});
   var totalGeral=0;
-  var html=ordem.map(function(fid){
+  var estouraAlgum=false;
+  var html=ordem.map(function(fid,gi){
     var f=(S.fornecedores||[]).find(function(x){return x.id===fid;})||{nome:'?'};
     var its=grupos[fid];var tot=its.reduce(function(s,x){return s+x.v*x.q;},0);totalGeral+=tot;
+    var pz={};its.forEach(function(x){if(x.prazo)pz[x.prazo]=(pz[x.prazo]||0)+1;});
+    var prazoSug=Object.keys(pz).sort(function(a,b){return pz[b]-pz[a];})[0]||f.prazo||'';
+    var an=analisarParcelas(tot,prazoSug,dataPed);if(an.estoura)estouraAlgum=true;
     var avisos=[];
     if(f.valor_maximo&&tot>f.valor_maximo)avisos.push('⚠️ Passa do valor máximo ('+moeda(f.valor_maximo)+')');
     if(f.pedido_minimo&&tot<f.pedido_minimo)avisos.push('⚠️ Abaixo do pedido mínimo ('+moeda(f.pedido_minimo)+')');
@@ -1447,12 +1512,16 @@ async function montarPedido(){
       +(avisos.length?'<div style="font-size:12px;color:#92400E;background:#FEF3C7;border-radius:6px;padding:6px 8px;margin-bottom:6px">'+avisos.join('<br>')+'</div>':'')
       +'<div class="table-wrap"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto</th><th>Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Subtotal</th><th style="text-align:left">Por quê</th></tr></thead><tbody>'
       +its.map(function(x){return'<tr><td class="pn">'+x.prod.nome+'</td><td style="text-align:center">'+x.q+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v)+'</td><td style="text-align:right;font-family:monospace">'+moeda(x.v*x.q)+'</td><td style="font-size:11px;color:var(--cinza4)">'+x.motivo+(x.rot?' · '+(x.velho?'<b style="color:#92400E">⚠ '+x.rot+' (mais de 60 dias)</b>':x.rot):'')+(x.prazo?' · prazo '+x.prazo:'')+'</td></tr>';}).join('')
-      +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600">Total</td><td style="text-align:right;font-weight:600;font-family:monospace;color:var(--verde)">'+moeda(tot)+'</td><td></td></tr></tfoot></table></div></div>';
+      +'</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:600">Total</td><td style="text-align:right;font-weight:600;font-family:monospace;color:var(--verde)">'+moeda(tot)+'</td><td></td></tr></tfoot></table></div>'
+      +'<div style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:12px"><label>Prazo deste pedido:</label><input id="pd-prazo-'+gi+'" value="'+prazoSug+'" style="width:160px;font-size:12px;padding:3px 6px" onchange="recalcVenc('+gi+')"><span style="color:var(--cinza4)">(confirme com o representante)</span></div>'
+      +'<div id="pd-venc-'+gi+'" data-total="'+tot+'">'+an.html+'</div></div>';
   }).join('');
   if(semPreco.length)html+='<div style="font-size:12px;margin-top:6px"><b>Sem preço em nenhum fornecedor ('+semPreco.length+'):</b> '+semPreco.join(' · ')+'</div>';
   if(naoAchado.length)html+='<div style="font-size:12px;margin-top:6px"><b>Código de barras não cadastrado na cotação ('+naoAchado.length+'):</b> '+naoAchado.join(', ')+'</div>';
   out.innerHTML=html;
-  st.innerHTML='<b>Total do pedido: '+moeda(totalGeral)+'</b> em '+ordem.length+' fornecedor(es)'+(voltaram?' · '+voltaram+' item(s) voltaram para o fornecedor do dia por causa do pedido mínimo':'');
+  st.innerHTML='<b>Total do pedido: '+moeda(totalGeral)+'</b> em '+ordem.length+' fornecedor(es)'+(voltaram?' · '+voltaram+' item(s) voltaram para o fornecedor do dia por causa do pedido mínimo':'')
+    +(AGENDA&&AGENDA.ok?(estouraAlgum?'<div style="margin-top:6px;padding:8px;border-radius:8px;background:#FDE2E1;color:#9C0006;font-weight:600">❌ Algum vencimento passa do limite diário do sistema de gestão. Ajuste antes de enviar.</div>':'<div style="margin-top:6px;color:#1B7A3D">✅ Todos os vencimentos cabem no limite diário.</div>')
+      :'<div style="margin-top:6px;color:#92400E">⚠ Não encontrei os boletos do sistema de gestão neste computador. Abra o sistema de gestão uma vez neste navegador e tente de novo.</div>');
 }
 function pedirWppForn(btn){
   var tel=btn.getAttribute('data-tel').replace(/\D/g,'');
