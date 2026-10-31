@@ -1115,23 +1115,25 @@ function calcularCombo(){
   var eco=melhorUnico-totalIdeal;
 
   // ══ ALERTA DE PREÇO ALTO ══
-  var alertasPreco=[];
+  // Compara o MESMO fornecedor, na MESMA base (nota com nota, orçamento com orçamento).
+  // Nota traz imposto (ST); orçamento muitas vezes não — comparar os dois dá aumento falso.
+  var alertasPreco=[],dataSnap='';
   if(S.historico&&S.historico.length&&S.historico[0].snapshot){
-    var snapAnt=S.historico[0].snapshot||{};
+    var snapAnt=S.historico[0].snapshot||{};dataSnap=S.historico[0].data||'';
     var precosAnt=snapAnt.cotacoes||{};
     linhas.forEach(function(x){
-      var melhorAnt=Infinity;
-      Object.keys(precosAnt[x.p.id]||{}).forEach(function(fid){
-        var v=parseFloat((precosAnt[x.p.id][fid]||{}).preco);
-        if(!isNaN(v)&&v>0&&v<melhorAnt)melhorAnt=v;
-      });
-      if(melhorAnt<Infinity){
-        var diff=((x.min-melhorAnt)/melhorAnt)*100;
-        if(diff>=10)alertasPreco.push({nome:x.p.nome,ant:melhorAnt,atual:x.min,diff:diff});
-      }
+      var atual=(S.cotacoes[x.p.id]||{})[x.mf]||{};
+      var ant=(precosAnt[x.p.id]||{})[x.mf];
+      if(!ant)return;
+      var baseAt=atual.origem==='nota'?'nota':'orcamento',baseAnt=ant.origem==='nota'?'nota':'orcamento';
+      if(baseAt!==baseAnt)return;
+      var va=parseFloat(ant.preco),vn=parseFloat(atual.preco);
+      if(!(va>0)||!(vn>0))return;
+      var diff=((vn-va)/va)*100;
+      if(diff>=10)alertasPreco.push({nome:x.p.nome,ant:va,atual:vn,diff:diff});
     });
   }
-  var alertaHtml=alertasPreco.length?'<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:12px;margin-bottom:14px"><div style="font-weight:600;color:#92400E;margin-bottom:8px">⚠️ Alertas de Preço Alto</div>'+alertasPreco.map(function(a){return'<div style="font-size:12px;color:#92400E;padding:3px 0">📈 <b>'+a.nome+'</b>: era '+moeda(a.ant)+' → agora '+moeda(a.atual)+' <span style="color:var(--erro);font-weight:600">(+'+a.diff.toFixed(0)+'%)</span></div>';}).join('')+'</div>':'';
+  var alertaHtml=alertasPreco.length?'<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:12px;margin-bottom:14px"><div style="font-weight:600;color:#92400E;margin-bottom:8px">⚠️ Alertas de Preço Alto <span style="font-weight:400;font-size:11px">(mesmo fornecedor e mesma base, comparado ao histórico salvo em '+(dataSnap?dataSnap.split('-').reverse().join('/'):'—')+')</span></div>'+alertasPreco.map(function(a){return'<div style="font-size:12px;color:#92400E;padding:3px 0">📈 <b>'+a.nome+'</b>: era '+moeda(a.ant)+' → agora '+moeda(a.atual)+' <span style="color:var(--erro);font-weight:600">(+'+a.diff.toFixed(0)+'%)</span></div>';}).join('')+'</div>':'';
 
   // ══ PEDIDO POR FORNECEDOR ══
   var pedidosPorForn={};
