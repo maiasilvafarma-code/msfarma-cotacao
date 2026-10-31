@@ -165,12 +165,14 @@ td.vd input{width:105px;font-size:12px;}
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="abrirMP()">+ Produto</button>
         <button class="btn btn-primary btn-sm" onclick="document.getElementById('icsv').click()">⬆ Importar</button>
+        <button class="btn btn-outline btn-sm" onclick="abrirVinculos()">🔗 Ligar orçamentos sem código</button>
         <input type="file" id="icsv" accept=".csv,.txt" style="display:none" onchange="importarCSV(event)">
       </div>
     </div>
     <div style="margin-bottom:12px">
       <input id="busca-prod" type="search" placeholder="Buscar produto..." oninput="buscarNoBanco(this.value)" style="width:100%;padding:9px 12px;border:1.5px solid var(--cinza2);border-radius:8px;font-size:13px;">
     </div>
+    <div id="vinc-area" style="margin-bottom:12px"></div>
     <div id="lista-prod"></div>
   </div>
 </div>
@@ -1164,6 +1166,69 @@ function irParaComparativo(){
   var tab=document.querySelectorAll('.tab')[2];
   if(tab)tab.click();
 }
+// ══ LIGAR ORÇAMENTOS SEM CÓDIGO DE BARRAS ══
+var vinc=[];
+async function abrirVinculos(){
+  var el=document.getElementById('vinc-area');
+  el.innerHTML='Procurando produtos com preço e sem código de barras...';
+  var base=await sbGetAll('cotacao_produtos','select=id,codigo,nome');
+  var pr=await sbGetAll('cotacao_precos','select=id,produto_id,fornecedor_id,preco,origem,updated_at');
+  var k=function(c){return String(c||'').replace(/\D/g,'').replace(/^0+/,'');};
+  var byId={};base.forEach(function(b){byId[b.id]=b;});
+  var nomeF={};(S.fornecedores||[]).forEach(function(f){nomeF[f.id]=f.nome;});
+  var semCod={};pr.forEach(function(x){if(x.preco>0&&byId[x.produto_id]&&!k(byId[x.produto_id].codigo))(semCod[x.produto_id]=semCod[x.produto_id]||[]).push(x);});
+  var comCod=base.filter(function(b){return k(b.codigo);});
+  var idx={};comCod.forEach(function(b){b._Q=tokensProd(b.nome);b._Q.forEach(function(t){if(!/\d/.test(t)&&t.length>=4)(idx[t]=idx[t]||[]).push(b);});});
+  vinc=Object.keys(semCod).map(function(id){
+    var p=byId[id],P=tokensProd(p.nome),nums=P.filter(function(x){return /\d/.test(x);});
+    var vistos={},cands=[];
+    P.filter(function(x){return !/\d/.test(x)&&x.length>=4;}).slice(0,3).forEach(function(ch){(idx[ch]||[]).forEach(function(c){
+      if(vistos[c.id])return;vistos[c.id]=1;var Q=c._Q;
+      if(!nums.every(function(n){return Q.indexOf(n)>=0;}))return;
+      var uni=P.concat(Q.filter(function(x){return P.indexOf(x)<0;})).length;
+      cands.push({c:c,sc:P.filter(function(x){return Q.indexOf(x)>=0;}).length/uni});
+    });});
+    cands.sort(function(a,b){return b.sc-a.sc;});
+    return{id:id,nome:p.nome,precos:semCod[id],cands:cands.slice(0,4),escolha:cands.length&&cands[0].sc>=0.99?cands[0].c.id:''};
+  }).sort(function(a,b){return (b.cands[0]?b.cands[0].sc:0)-(a.cands[0]?a.cands[0].sc:0);});
+  var auto=vinc.filter(function(v){return v.escolha;}).length;
+  el.innerHTML='<div style="border:1px solid var(--cinza2);border-radius:10px;padding:12px">'
+    +'<div style="font-weight:600;margin-bottom:4px">'+vinc.length+' produto(s) com preço e sem código de barras</div>'
+    +'<p style="font-size:12px;color:var(--cinza4);margin:0 0 8px">Para cada um, escolha o cadastro com código de barras. Os '+auto+' com nome igual já vêm marcados. Confira o laboratório: genérico de laboratório diferente tem nome quase igual. Deixe "— não ligar —" quando nenhuma sugestão for o mesmo produto. Nada é apagado: só os preços mudam de cadastro.</p>'
+    +'<div class="table-wrap" style="max-height:60vh;overflow:auto"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Produto do orçamento (sem código)</th><th style="text-align:left">Preços</th><th style="text-align:left">Ligar a</th></tr></thead><tbody>'
+    +vinc.map(function(v,i){
+      return '<tr><td class="pn">'+v.nome+'</td><td style="font-size:11px;color:var(--cinza4)">'+v.precos.map(function(x){return (nomeF[x.fornecedor_id]||'?')+' '+moeda(x.preco);}).join('<br>')+'</td>'
+        +'<td><select onchange="vinc['+i+'].escolha=this.value" style="font-size:12px;max-width:340px"><option value="">— não ligar —</option>'
+        +v.cands.map(function(c){return '<option value="'+c.c.id+'"'+(c.c.id===v.escolha?' selected':'')+'>'+c.c.nome+' · '+c.c.codigo+' ('+Math.round(c.sc*100)+'%)</option>';}).join('')
+        +'</select></td></tr>';}).join('')
+    +'</tbody></table></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn btn-outline btn-sm" onclick="document.getElementById(\'vinc-area\').innerHTML=\'\'">Fechar</button><button class="btn btn-primary btn-sm" onclick="aplicarVinculos()">🔗 Ligar os marcados</button></div></div>';
+}
+async function aplicarVinculos(){
+  var marcados=vinc.filter(function(v){return v.escolha;});
+  if(!marcados.length){toast('Nenhum produto marcado');return;}
+  if(!confirm('Ligar '+marcados.length+' produto(s)? Os preços passam para o cadastro com código de barras.'))return;
+  setSyncStatus('sync');
+  var destinos=marcados.map(function(v){return v.escolha;});
+  var existentes=[];
+  for(var i=0;i<destinos.length;i+=100){existentes=existentes.concat(await sbGetAll('cotacao_precos','produto_id=in.('+destinos.slice(i,i+100).join(',')+')&select=id,produto_id,fornecedor_id,updated_at'));}
+  var ex={};existentes.forEach(function(x){ex[x.produto_id+'|'+x.fornecedor_id]=x;});
+  var movidos=0,mantidos=0;
+  for(var j=0;j<marcados.length;j++){
+    var v=marcados[j];
+    for(var q=0;q<v.precos.length;q++){
+      var x=v.precos[q],alvo=ex[v.escolha+'|'+x.fornecedor_id];
+      if(alvo&&String(alvo.updated_at||'')>=String(x.updated_at||'')){mantidos++;continue;}
+      if(alvo){await sbDelete('cotacao_precos',alvo.id);}
+      var r=await fetch(SB_URL+'/rest/v1/cotacao_precos?id=eq.'+x.id,{method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({produto_id:v.escolha})});
+      if(r.ok){movidos++;ex[v.escolha+'|'+x.fornecedor_id]={id:x.id,updated_at:x.updated_at};}
+    }
+  }
+  setSyncStatus('ok');
+  document.getElementById('vinc-area').innerHTML='<div style="font-size:12px;padding:8px;background:var(--verde-bg);border-radius:8px">✅ '+marcados.length+' produto(s) ligados · '+movidos+' preço(s) passaram para o cadastro com código de barras'+(mantidos?' · '+mantidos+' mantidos porque o cadastro de destino já tinha preço mais novo do mesmo fornecedor':'')+'</div>';
+  try{await carregarCotacao();}catch(e){}
+}
+
 // ══ IMPORTAR XML DE NOTA ══
 var xmlNotas=[];
 function _tx(el,tag){if(!el)return null;var e=el.getElementsByTagName(tag)[0];return e?e.textContent:null;}
